@@ -1,0 +1,54 @@
+name: Main Branch — Staging Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  staging-build:
+    name: Build & Deploy Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        run: flutter test --coverage
+
+      - name: Build Android (staging)
+        run: flutter build apk --flavor staging -t lib/main_staging.dart
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL_STAGING }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_STAGING }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_DEV }}
+
+      - name: Build Web (staging)
+        run: flutter build web --flavor staging -t lib/main_staging.dart
+
+      # Uncomment when Firebase App Distribution is set up (Phase 0 completion)
+      # - name: Upload to Firebase App Distribution
+      #   uses: wzieba/Firebase-Distribution-Github-Action@v1
+      #   with:
+      #     appId: ${{ secrets.FIREBASE_APP_ID }}
+      #     token: ${{ secrets.FIREBASE_TOKEN }}
+      #     file: build/app/outputs/flutter-apk/app-staging-release.apk
+
+      # Uncomment when Sentry auth token is configured
+      # - name: Upload source maps to Sentry
+      #   run: flutter packages pub run sentry_dart_plugin
+      #   env:
+      #     SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
