@@ -55,3 +55,9 @@ lcov.info
 
 # Logs
 *.log
+
+# Downloaded installers / binaries — should never be in the repo
+*.exe
+*.dmg
+*.pkg
+*.msi
