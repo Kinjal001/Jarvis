@@ -50,7 +50,7 @@ jobs:
         run: flutter build apk --flavor staging -t lib/main_staging.dart
 
       - name: Build Web (staging)
-        run: flutter build web --flavor staging -t lib/main_staging.dart
+        run: flutter build web -t lib/main_staging.dart
 
       # Uncomment when Firebase App Distribution is set up (Phase 5)
       # - name: Upload to Firebase App Distribution

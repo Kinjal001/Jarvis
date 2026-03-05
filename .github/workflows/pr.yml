@@ -60,4 +60,4 @@ jobs:
         run: flutter build apk --debug --flavor dev -t lib/main_dev.dart
 
       - name: Build Web (dev)
-        run: flutter build web --flavor dev -t lib/main_dev.dart
+        run: flutter build web -t lib/main_dev.dart
