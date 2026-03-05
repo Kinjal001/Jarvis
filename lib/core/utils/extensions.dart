@@ -1,7 +1,7 @@
-/// Dart extension methods used across the app.
-///
-/// Keep extensions focused and well-named.
-/// Add new ones here as patterns emerge across the codebase.
+// Dart extension methods used across the app.
+//
+// Keep extensions focused and well-named.
+// Add new ones here as patterns emerge across the codebase.
 
 extension StringExtensions on String {
   /// Capitalizes the first character of the string.

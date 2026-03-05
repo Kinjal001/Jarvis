@@ -26,7 +26,7 @@ class SentryService {
       exception,
       stackTrace: stackTrace,
       withScope: extras != null
-          ? (scope) => extras.forEach(scope.setExtra)
+          ? (scope) => scope.setContexts('extras', extras)
           : null,
     );
   }
