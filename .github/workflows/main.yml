@@ -16,30 +16,43 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.0'
+          flutter-version: '3.41.2'
           channel: 'stable'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze
+      - name: Generate code (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze code
         run: flutter analyze --fatal-infos
 
-      - name: Test
+      - name: Create .env files from secrets
+        run: |
+          printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nSENTRY_DSN=%s\nAPP_ENV=dev\nAPP_VERSION=0.1.0\n" \
+            "$SUPABASE_URL_DEV" "$SUPABASE_ANON_KEY_DEV" "$SENTRY_DSN_DEV" > .env.dev
+          printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nSENTRY_DSN=%s\nAPP_ENV=staging\nAPP_VERSION=0.1.0\n" \
+            "$SUPABASE_URL_STAGING" "$SUPABASE_ANON_KEY_STAGING" "$SENTRY_DSN_DEV" > .env.staging
+          cp .env.staging .env.prod
+        env:
+          SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
+          SUPABASE_ANON_KEY_DEV: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
+          SUPABASE_URL_STAGING: ${{ secrets.SUPABASE_URL_STAGING }}
+          SUPABASE_ANON_KEY_STAGING: ${{ secrets.SUPABASE_ANON_KEY_STAGING }}
+          SENTRY_DSN_DEV: ${{ secrets.SENTRY_DSN_DEV }}
+
+      - name: Run tests
         run: flutter test --coverage
 
-      - name: Build Android (staging)
+      - name: Build Android APK (staging)
         run: flutter build apk --flavor staging -t lib/main_staging.dart
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL_STAGING }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_STAGING }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN_DEV }}
 
       - name: Build Web (staging)
         run: flutter build web --flavor staging -t lib/main_staging.dart
 
-      # Uncomment when Firebase App Distribution is set up (Phase 0 completion)
+      # Uncomment when Firebase App Distribution is set up (Phase 5)
       # - name: Upload to Firebase App Distribution
       #   uses: wzieba/Firebase-Distribution-Github-Action@v1
       #   with:

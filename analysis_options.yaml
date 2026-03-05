@@ -1,0 +1,37 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  plugins:
+    - custom_lint
+  errors:
+    # Treat missing returns as errors, not warnings
+    missing_return: error
+    # Treat invalid annotations as errors
+    invalid_annotation_target: ignore
+  exclude:
+    # Exclude generated files from analysis
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.mocks.dart"
+
+linter:
+  rules:
+    # Always use package imports (not relative) — prevents import confusion
+    always_use_package_imports: true
+    # No print() in production code — use proper logging
+    avoid_print: true
+    # Prefer final for variables that are never reassigned
+    prefer_final_locals: true
+    # Const constructors where possible — better performance
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    # Avoid empty catch blocks — always handle errors
+    avoid_empty_else: true
+    empty_catches: true
+    # Use is/is! instead of runtimeType checks
+    avoid_type_to_string: true
+    # Avoid unnecessary null checks
+    unnecessary_null_checks: true
+    # Prefer single quotes
+    prefer_single_quotes: true

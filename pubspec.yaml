@@ -1,0 +1,69 @@
+name: jarvis
+description: "Jarvis — Personal productivity OS. Manage projects, goals, habits, and daily life in one place."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^14.6.3
+
+  # Local database (offline-first)
+  drift: ^2.23.1
+  drift_flutter: ^0.2.4
+  path_provider: ^2.1.5
+
+  # Remote backend
+  supabase_flutter: ^2.9.0
+
+  # HTTP client
+  dio: ^5.8.0
+
+  # Immutable models + JSON serialization
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
+
+  # Functional error handling (Either<Failure, T>)
+  fpdart: ^1.1.0
+
+  # Error monitoring
+  sentry_flutter: ^9.0.0
+
+  # Environment config
+  flutter_dotenv: ^5.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Linting
+  flutter_lints: ^6.0.0
+  riverpod_lint: ^2.6.1
+  custom_lint: ^0.7.5
+
+  # Code generation
+  riverpod_generator: ^2.6.1
+  build_runner: ^2.4.14
+  freezed: ^3.0.0
+  json_serializable: ^6.9.2
+  drift_dev: ^2.23.1
+
+  # Testing
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env.dev
+    - .env.staging
+    - .env.prod
