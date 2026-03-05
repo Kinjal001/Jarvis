@@ -19,10 +19,8 @@ sealed class Failure with _$Failure {
   const factory Failure.database({required String message}) = DatabaseFailure;
 
   /// The server returned an error response.
-  const factory Failure.server({
-    required String message,
-    int? statusCode,
-  }) = ServerFailure;
+  const factory Failure.server({required String message, int? statusCode}) =
+      ServerFailure;
 
   /// An unexpected error that doesn't fit the categories above.
   const factory Failure.unknown({required String message}) = UnknownFailure;

@@ -44,9 +44,7 @@ Future<void> bootstrap(AppFlavor flavor) async {
     appRunner: () => runApp(
       // ProviderScope is the Riverpod dependency injection container.
       // Every provider in the app is scoped to this.
-      const ProviderScope(
-        child: JarvisApp(),
-      ),
+      const ProviderScope(child: JarvisApp()),
     ),
   );
 }

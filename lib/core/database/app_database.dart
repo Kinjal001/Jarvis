@@ -16,8 +16,7 @@ part 'app_database.g.dart';
 /// Schema version must be bumped whenever the schema changes.
 @DriftDatabase(tables: [])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor])
-      : super(executor ?? _openConnection());
+  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
   int get schemaVersion => 1;
