@@ -26,9 +26,6 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Analyze code
-        run: flutter analyze --fatal-infos
-
       - name: Create .env files from secrets
         run: |
           printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nSENTRY_DSN=%s\nAPP_ENV=dev\nAPP_VERSION=0.1.0\n" \
@@ -42,6 +39,9 @@ jobs:
           SUPABASE_URL_STAGING: ${{ secrets.SUPABASE_URL_STAGING }}
           SUPABASE_ANON_KEY_STAGING: ${{ secrets.SUPABASE_ANON_KEY_STAGING }}
           SENTRY_DSN_DEV: ${{ secrets.SENTRY_DSN_DEV }}
+
+      - name: Analyze code
+        run: flutter analyze --fatal-infos
 
       - name: Run tests
         run: flutter test --coverage

@@ -26,15 +26,10 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed .
-
-      - name: Analyze code
-        run: flutter analyze --fatal-infos
-
       # Create the .env files from GitHub Secrets so the app can load them.
       # On CI there are no real .env files (they're gitignored).
       # The assets declared in pubspec.yaml must exist at build time.
+      # Must run before analyze — the analyzer checks that declared assets exist.
       - name: Create .env files from secrets
         run: |
           printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nSENTRY_DSN=%s\nAPP_ENV=dev\nAPP_VERSION=0.1.0\n" \
@@ -45,6 +40,12 @@ jobs:
           SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
           SUPABASE_ANON_KEY_DEV: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
           SENTRY_DSN_DEV: ${{ secrets.SENTRY_DSN_DEV }}
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze code
+        run: flutter analyze --fatal-infos
 
       - name: Run tests
         run: flutter test --coverage
