@@ -43,7 +43,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(_makeGoal());
-    registerFallbackValue(GoalsTableCompanion());
+    registerFallbackValue(const GoalsTableCompanion());
   });
 
   setUp(() {

@@ -47,7 +47,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(_makeTask());
     registerFallbackValue(TaskStatus.pending);
-    registerFallbackValue(TasksTableCompanion());
+    registerFallbackValue(const TasksTableCompanion());
   });
 
   setUp(() {
