@@ -12,8 +12,24 @@
 
 ## Current Phase
 
-**Phase 0 — Foundation** (in progress)
+**Phase 1 — Core Loop** (in progress)
+- Phase 0 — Foundation: **COMPLETE** (CI green, branch protection on main)
+- Phase 1 PR 1 — Domain layer: **MERGED** (entities, repo interfaces, 21 use cases, 38 tests)
+- Phase 1 PR 2 — Data layer: **NEXT** (Drift tables, datasources, repo impls, auth)
+
 See `docs/phases.md` for the full roadmap.
+
+## Critical Code Patterns (Read Before Writing Anything)
+
+| Situation | Rule |
+|---|---|
+| Freezed entity | `abstract class Foo with _$Foo` — Freezed 3.x requires `abstract` |
+| Any file importing fpdart + using Task entity | `import 'package:fpdart/fpdart.dart' hide Task;` |
+| mocktail test using `any()` with custom type | `setUpAll(() => registerFallbackValue(instance))` per custom type |
+| CI workflow step order | Create .env files BEFORE the analyze step |
+| Flutter web build | No `--flavor` flag — use `-t lib/main_dart` entry point only |
+| Committing code | Run `dart format .` first (Windows/Linux formatting differs) |
+| Use case structure | Constructor takes repo; single `call()` returns `Either<Failure, T>` |
 
 ---
 

@@ -8,19 +8,21 @@ Each phase produces a shippable, usable product. Never start a phase until the p
 **Goal:** Zero features, but the entire infrastructure is solid. Every line of feature code written after this runs on proven ground.
 
 ### Deliverables
-- [ ] Flutter project created with 3 flavors (dev/staging/prod)
-- [ ] Clean Architecture folder structure in place
-- [ ] Drift local database initialized (empty schema)
-- [ ] Supabase project created and connected
-- [ ] Sentry initialized in all flavors
-- [ ] go_router set up (placeholder home screen)
-- [ ] GitHub repo created, branch protection on `main`
-- [ ] GitHub Actions CI pipeline running (lint + test + build)
-- [ ] `.env.example` committed, actual `.env` files gitignored
-- [ ] Flutter flavor build scripts working
-- [ ] Basic widget test passing in CI
+- [x] Flutter project created with 3 flavors (dev/staging/prod)
+- [x] Clean Architecture folder structure in place
+- [x] Drift local database initialized (empty schema)
+- [x] Supabase project created and connected
+- [x] Sentry initialized in all flavors
+- [x] go_router set up (placeholder home screen)
+- [x] GitHub repo created, branch protection on `main`
+- [x] GitHub Actions CI pipeline running (lint + test + build)
+- [x] `.env.example` committed, actual `.env` files gitignored
+- [x] Flutter flavor build scripts working
+- [x] Basic widget test passing in CI
 
 **Done when:** CI is green, app builds on Android and Web (dev flavor), and Sentry receives a test event.
+
+**STATUS: COMPLETE** — CI green, Android + Web builds passing, branch protection active.
 
 ---
 
