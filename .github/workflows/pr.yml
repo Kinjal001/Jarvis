@@ -50,14 +50,23 @@ jobs:
       - name: Run tests
         run: flutter test --coverage
 
+      # Strip generated files before the threshold check.
+      # Generated code is correct by construction — it must not count against
+      # our 70% target. lcov glob: '*' matches any string including '/', so
+      # '*.g.dart' correctly matches lib/core/database/app_database.g.dart.
+      - name: Remove generated files from coverage report
+        run: |
+          lcov \
+            --remove coverage/lcov.info \
+            '*.g.dart' \
+            '*.freezed.dart' \
+            --output-file coverage/lcov.info
+
       - name: Check coverage threshold (70%)
         uses: VeryGoodOpenSource/very_good_coverage@v3
         with:
           path: coverage/lcov.info
           min_coverage: 70
-          exclude: |
-            **/*.g.dart
-            **/*.freezed.dart
 
       - name: Build Android APK (dev, debug)
         run: flutter build apk --debug --flavor dev -t lib/main_dev.dart
