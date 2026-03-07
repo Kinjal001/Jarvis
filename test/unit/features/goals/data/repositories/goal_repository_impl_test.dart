@@ -112,6 +112,15 @@ void main() {
 
       expect(result, Right(goal));
     });
+
+    test('returns failure when local throws', () async {
+      when(() => local.upsert(any())).thenThrow(Exception('write error'));
+
+      expect(
+        await repo.updateGoal(_makeGoal()),
+        const Left(Failure.database(message: 'Failed to update goal')),
+      );
+    });
   });
 
   group('archiveGoal', () {
