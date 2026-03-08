@@ -61,7 +61,8 @@ jobs:
             --remove coverage/lcov.info \
             '*.g.dart' \
             '*.freezed.dart' \
-            --output-file coverage/lcov.info
+            --output-file coverage/lcov.info \
+            --ignore-errors unused
 
       - name: Check coverage threshold (70%)
         uses: VeryGoodOpenSource/very_good_coverage@v3
