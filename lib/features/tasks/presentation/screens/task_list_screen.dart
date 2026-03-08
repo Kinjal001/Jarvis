@@ -37,8 +37,6 @@ class TaskListScreen extends ConsumerWidget {
         ],
       ),
     );
-
-    titleController.dispose();
   }
 
   @override
