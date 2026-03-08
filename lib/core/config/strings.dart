@@ -19,7 +19,53 @@ class AppStrings {
   static const save = 'Save';
   static const delete = 'Delete';
   static const confirm = 'Confirm';
+  static const viewAll = 'View all';
 
-  // Phase 0 placeholder
+  // Auth
+  static const signIn = 'Sign In';
+  static const signOut = 'Sign Out';
+  static const createAccount = 'Create Account';
+  static const email = 'Email';
+  static const password = 'Password';
+  static const fieldRequired = 'This field is required';
+  static const passwordTooShort = 'Password must be at least 6 characters';
+  static const authError = 'Authentication failed';
+  static const noAccountSignUp = "Don't have an account? Sign Up";
+  static const haveAccountSignIn = 'Already have an account? Sign In';
+
+  // Navigation / sections
+  static const today = 'Today';
+  static const goals = 'Goals';
+  static const projects = 'Projects';
+  static const tasks = 'Tasks';
+  static const subtasks = 'Subtasks';
+  static const activeGoals = 'Active Goals';
+  static const dueToday = 'Due Today';
+
+  // Goals
+  static const newGoal = 'New Goal';
+  static const goalTitle = 'Title';
+  static const goalIntention = 'Why this goal?';
+  static const noGoalsYet = 'No goals yet. Tap + to create one.';
+  static const noActiveGoals = 'No active goals.';
+  static String priority(int p) => 'Priority: $p';
+
+  // Projects
+  static const newProject = 'New Project';
+  static const projectTitle = 'Project title';
+  static const noProjectsYet = 'No projects yet. Tap + to add one.';
+
+  // Subtasks
+  static const newSubtask = 'New Subtask';
+  static const subtaskTitle = 'Subtask title';
+  static const noSubtasksYet = 'No subtasks yet. Tap + to add one.';
+
+  // Tasks
+  static const newTask = 'New Task';
+  static const taskTitle = 'Task title';
+  static const noTasksYet = 'No tasks yet. Tap + to create one.';
+  static const noTasksDueToday = 'Nothing due today.';
+
+  // Phase 0 placeholder (kept for existing widget test)
   static const phase0Label = 'Phase 0 — Foundation';
 }

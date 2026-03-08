@@ -38,6 +38,9 @@ dependencies:
   # Error monitoring
   sentry_flutter: ^9.0.0
 
+  # UUID generation (for new entity IDs in the presentation layer)
+  uuid: ^4.5.1
+
   # Environment config
   flutter_dotenv: ^5.2.1
 

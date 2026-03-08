@@ -50,10 +50,15 @@ jobs:
       - name: Run tests
         run: flutter test --coverage
 
-      # Strip generated files before the threshold check.
-      # Generated code is correct by construction — it must not count against
-      # our 70% target. lcov glob: '*' matches any string including '/', so
-      # '*.g.dart' correctly matches lib/core/database/app_database.g.dart.
+      # Strip generated and schema-only files before the threshold check.
+      # - *.g.dart, *.freezed.dart: code-generated, correct by construction.
+      # - *_table.dart: Drift schema declarations (column getters). They have
+      #   no business logic; correctness is proven by the datasource tests
+      #   which run real SQL against an in-memory DB. The Dart coverage tool
+      #   cannot track calls made via Drift's internal schema reflection, so
+      #   these lines always show as 0% regardless of actual test coverage.
+      # lcov glob: '*' matches any string including '/', so '*.g.dart'
+      # correctly matches nested paths like lib/core/database/app_database.g.dart.
       - name: Remove generated files from coverage report
         run: |
           sudo apt-get install -y lcov --quiet
@@ -61,6 +66,7 @@ jobs:
             --remove coverage/lcov.info \
             '*.g.dart' \
             '*.freezed.dart' \
+            '*_table.dart' \
             --output-file coverage/lcov.info \
             --ignore-errors unused
 
