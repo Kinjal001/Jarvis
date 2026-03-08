@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jarvis/core/config/strings.dart';
 import 'package:jarvis/core/config/theme.dart';
 import 'package:jarvis/core/router/app_router.dart';
+import 'package:jarvis/core/sync/sync_provider.dart';
 
 /// Root widget of the Jarvis app.
 ///
@@ -15,6 +16,9 @@ class JarvisApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    // Initialize the sync notifier so it registers its lifecycle observer and
+    // auth listener. keepAlive: true ensures it stays alive for the full session.
+    ref.read(syncNotifierProvider);
 
     return MaterialApp.router(
       title: AppStrings.appName,
