@@ -26,12 +26,12 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.checklist),
             tooltip: AppStrings.tasks,
-            onPressed: () => context.go('/tasks'),
+            onPressed: () => context.push('/tasks'),
           ),
           IconButton(
             icon: const Icon(Icons.flag_outlined),
             tooltip: AppStrings.goals,
-            onPressed: () => context.go('/goals'),
+            onPressed: () => context.push('/goals'),
           ),
         ],
       ),
@@ -75,7 +75,7 @@ class HomeScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               TextButton(
-                onPressed: () => context.go('/goals'),
+                onPressed: () => context.push('/goals'),
                 child: const Text(AppStrings.viewAll),
               ),
             ],
@@ -108,7 +108,7 @@ class HomeScreen extends ConsumerWidget {
                         title: Text(g.title),
                         subtitle: Text(g.intention),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => context.go('/goals/${g.id}'),
+                        onTap: () => context.push('/goals/${g.id}'),
                       ),
                     )
                     .toList(),

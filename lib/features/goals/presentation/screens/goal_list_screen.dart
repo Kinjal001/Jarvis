@@ -58,9 +58,6 @@ class GoalListScreen extends ConsumerWidget {
         ],
       ),
     );
-
-    titleController.dispose();
-    intentionController.dispose();
   }
 
   @override
@@ -114,7 +111,7 @@ class _GoalTile extends StatelessWidget {
       title: Text(goal.title),
       subtitle: Text(goal.intention),
       trailing: _StatusChip(status: goal.status),
-      onTap: () => context.go('/goals/${goal.id}'),
+      onTap: () => context.push('/goals/${goal.id}'),
     );
   }
 }

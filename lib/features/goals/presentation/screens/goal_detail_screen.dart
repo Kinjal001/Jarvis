@@ -46,8 +46,6 @@ class GoalDetailScreen extends ConsumerWidget {
         ],
       ),
     );
-
-    titleController.dispose();
   }
 
   @override
@@ -125,7 +123,7 @@ class _ProjectTile extends StatelessWidget {
     return ListTile(
       title: Text(project.title),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => context.go('/projects/${project.id}'),
+      onTap: () => context.push('/projects/${project.id}'),
     );
   }
 }

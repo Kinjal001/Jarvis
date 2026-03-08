@@ -44,8 +44,6 @@ class ProjectDetailScreen extends ConsumerWidget {
         ],
       ),
     );
-
-    titleController.dispose();
   }
 
   @override
