@@ -2,12 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:jarvis/core/widgets/bottom_nav_shell.dart';
 import 'package:jarvis/features/auth/presentation/providers/auth_providers.dart';
 import 'package:jarvis/features/auth/presentation/screens/login_screen.dart';
 import 'package:jarvis/features/auth/presentation/screens/signup_screen.dart';
 import 'package:jarvis/features/goals/presentation/screens/goal_detail_screen.dart';
 import 'package:jarvis/features/goals/presentation/screens/goal_list_screen.dart';
 import 'package:jarvis/features/home/presentation/screens/home_screen.dart';
+import 'package:jarvis/features/profile/presentation/screens/profile_screen.dart';
 import 'package:jarvis/features/projects/presentation/screens/project_detail_screen.dart';
 import 'package:jarvis/features/tasks/presentation/screens/task_list_screen.dart';
 
@@ -15,12 +17,22 @@ part 'app_router.g.dart';
 
 /// Provides the single [GoRouter] instance.
 ///
+/// Route structure:
+///   /login, /signup       — auth screens (no bottom nav)
+///   /goals/:id            — goal detail (no bottom nav — pushed on top)
+///   /projects/:id         — project detail (no bottom nav — pushed on top)
+///   ShellRoute            — bottom nav shell wrapping the 4 main tabs:
+///     /today              — Today screen (default tab)
+///     /goals              — Goals list
+///     /tasks              — Tasks list
+///     /profile            — Profile
+///
+/// Detail routes are defined OUTSIDE the ShellRoute so when you push to them
+/// (via context.push), go_router renders them on the root navigator — the
+/// bottom nav disappears and the back button returns to the previous tab.
+///
 /// `keepAlive: true` — never recreate the router while the app is running
 /// or the navigation stack would be lost.
-///
-/// Auth changes are communicated via a [ValueNotifier<bool>] that acts as
-/// go_router's [GoRouter.refreshListenable].  Whenever the notifier fires,
-/// the router re-evaluates the [redirect] callback without rebuilding itself.
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
   // Seed with whatever auth state we already have (may be loading → null).
@@ -35,8 +47,8 @@ GoRouter appRouter(Ref ref) {
   });
 
   return GoRouter(
-    initialLocation: '/',
-    debugLogDiagnostics: true,
+    initialLocation: '/today',
+    debugLogDiagnostics: !kReleaseMode,
     refreshListenable: authState,
     redirect: (context, state) {
       final isAuth = authState.value;
@@ -44,10 +56,11 @@ GoRouter appRouter(Ref ref) {
       final isOnAuth = loc == '/login' || loc == '/signup';
 
       if (!isAuth && !isOnAuth) return '/login';
-      if (isAuth && isOnAuth) return '/';
+      if (isAuth && isOnAuth) return '/today';
       return null;
     },
     routes: [
+      // ── Auth (no bottom nav) ──────────────────────────────────────────────
       GoRoute(
         path: '/login',
         name: 'login',
@@ -58,16 +71,10 @@ GoRouter appRouter(Ref ref) {
         name: 'signup',
         builder: (context, state) => const SignupScreen(),
       ),
-      GoRoute(
-        path: '/',
-        name: 'home',
-        builder: (context, state) => const HomeScreen(),
-      ),
-      GoRoute(
-        path: '/goals',
-        name: 'goals',
-        builder: (context, state) => const GoalListScreen(),
-      ),
+
+      // ── Detail screens (no bottom nav) ────────────────────────────────────
+      // These are outside the ShellRoute so pushing to them from a tab hides
+      // the bottom nav and gives a clean full-screen detail view.
       GoRoute(
         path: '/goals/:id',
         name: 'goal-detail',
@@ -80,10 +87,35 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) =>
             ProjectDetailScreen(projectId: state.pathParameters['id']!),
       ),
-      GoRoute(
-        path: '/tasks',
-        name: 'tasks',
-        builder: (context, state) => const TaskListScreen(),
+
+      // ── Main shell (bottom nav) ───────────────────────────────────────────
+      ShellRoute(
+        // Pass the current matched location so BottomNavShell can highlight
+        // the correct tab without needing a BuildContext lookup.
+        builder: (context, state, child) =>
+            BottomNavShell(location: state.matchedLocation, child: child),
+        routes: [
+          GoRoute(
+            path: '/today',
+            name: 'today',
+            builder: (context, state) => const HomeScreen(),
+          ),
+          GoRoute(
+            path: '/goals',
+            name: 'goals',
+            builder: (context, state) => const GoalListScreen(),
+          ),
+          GoRoute(
+            path: '/tasks',
+            name: 'tasks',
+            builder: (context, state) => const TaskListScreen(),
+          ),
+          GoRoute(
+            path: '/profile',
+            name: 'profile',
+            builder: (context, state) => const ProfileScreen(),
+          ),
+        ],
       ),
     ],
   );
