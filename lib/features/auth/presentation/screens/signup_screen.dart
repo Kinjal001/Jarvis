@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jarvis/core/config/strings.dart';
+import 'package:jarvis/core/theme/app_colors.dart';
 import 'package:jarvis/features/auth/presentation/providers/auth_providers.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -46,31 +47,72 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     });
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // ── Logo ─────────────────────────────────────────────────
+                  Center(
+                    child: Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.heroGradient,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'J',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Title ─────────────────────────────────────────────────
                   Text(
-                    AppStrings.createAccount,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    AppStrings.appName,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 4),
+                  Text(
+                    AppStrings.createAccount,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 36),
+
+                  // ── Fields ───────────────────────────────────────────────
                   TextFormField(
                     key: const Key('email_field'),
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: AppStrings.email,
-                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.mail_outline_rounded),
                     ),
                     validator: (v) => (v == null || v.isEmpty)
                         ? AppStrings.fieldRequired
@@ -83,13 +125,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     obscureText: true,
                     decoration: const InputDecoration(
                       labelText: AppStrings.password,
-                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock_outline_rounded),
                     ),
                     validator: (v) => (v == null || v.length < 6)
                         ? AppStrings.passwordTooShort
                         : null,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
+
+                  // ── Sign up button ────────────────────────────────────────
                   FilledButton(
                     key: const Key('sign_up_button'),
                     onPressed: authState is AsyncLoading ? null : _submit,
@@ -97,7 +141,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Text(AppStrings.createAccount),
                   ),
