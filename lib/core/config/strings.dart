@@ -39,8 +39,15 @@ class AppStrings {
   static const projects = 'Projects';
   static const tasks = 'Tasks';
   static const subtasks = 'Subtasks';
+  static const profile = 'Profile';
   static const activeGoals = 'Active Goals';
   static const dueToday = 'Due Today';
+  static const addNew = 'Add New';
+
+  // Profile screen
+  static const streakComingInPhase2 = 'Streaks coming in Phase 2';
+  static const thisWeek = 'This week';
+  static const analyticsComingInPhase2 = 'Analytics coming in Phase 2';
 
   // Goals
   static const newGoal = 'New Goal';

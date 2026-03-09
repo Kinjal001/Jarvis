@@ -30,18 +30,73 @@ Each phase produces a shippable, usable product. Never start a phase until the p
 **Goal:** Users can create and track projects. The fundamental value proposition works.
 
 ### Deliverables
-- [ ] Auth (sign up, login, logout via Supabase Auth)
-- [ ] Goal creation and listing
-- [ ] Project creation under a goal (title, description, deadline, priority)
-- [ ] Subtask creation under a project
-- [ ] Task marking (complete/skip/pending)
-- [ ] Basic home screen (today's tasks + active projects)
-- [ ] Sync (local Drift ↔ Supabase)
-- [ ] Tags (create and attach to projects/tasks)
-- [ ] Unit tests for all use cases
-- [ ] Widget tests for key screens
+- [x] Auth (sign up, login, logout via Supabase Auth)
+- [x] Goal creation and listing
+- [x] Project creation under a goal (title, description, deadline, priority)
+- [x] Subtask creation under a project
+- [x] Task marking (complete/skip/pending)
+- [x] Basic home screen (today's tasks + active projects)
+- [x] Sync (local Drift ↔ Supabase)
+- [ ] Tags (deferred to Phase 2 — polymorphic junction table complexity)
+- [x] Unit tests for all use cases
+- [ ] Widget tests for key screens (partial — basic tests pass, deeper coverage in Phase 1.5)
 
 **Done when:** A user can sign up, create a goal with projects and subtasks, mark progress, and see it synced on two devices.
+
+**STATUS: COMPLETE** — 4 PRs merged, CI green, tested on Android device.
+
+---
+
+## Phase 1.5 — UI Overhaul
+**Goal:** The app looks and feels like something worth using daily. Behavioral design drives consistency.
+
+### Why a separate phase?
+Phase 1 shipped a functional but bare-bones UI (white theme, no nav bar, deep nesting). Real-device testing showed the UI discourages daily use. Before adding more features, the presentation layer needs to be rebuilt with intent.
+
+### Design Principles
+- **Dark navy-purple theme** — reduces eye strain, feels premium
+- **Colorful accent system** — each entity type has a distinct color (not monochrome)
+- **Behavioral psychology** — progress bars (goal gradient), streaks (loss aversion), completion rings (variable reward), Today-first layout (implementation intention)
+- **Bottom navigation** — no nesting, everything reachable in 1 tap
+- **Habitica-inspired energy** — colorful, alive, rewarding to interact with
+
+### Color Palette
+- Background: `#0D0D1A` | Surface: `#1A1A2E` | Card: `#252540`
+- Primary (violet): `#7C3AED` | Primary light: `#A855F7`
+- Indigo: `#6366F1` | Blue: `#3B82F6` | Cyan: `#06B6D4`
+- Amber/Gold: `#F59E0B` | Pink: `#EC4899` | Emerald: `#10B981`
+
+### Navigation Structure
+```
+Bottom Nav: [ Today ] [ Goals ] [ ◆ Add ] [ Tasks ] [ Profile ]
+```
+Diamond FAB in center (rotated square, violet, elevated above bar).
+
+### Deliverables
+- [ ] `lib/core/theme/app_colors.dart` — full color constants
+- [ ] `lib/core/theme/app_theme.dart` — Material 3 theme with color scheme
+- [ ] `lib/core/widgets/bottom_nav_shell.dart` — ShellRoute scaffold with bottom nav + diamond FAB
+- [ ] Router updated — ShellRoute wrapping Today/Goals/Tasks/Profile
+- [ ] **Today screen** — greeting, circular completion ring, active goals scroll, today's tasks
+- [ ] **Goals screen** — goal cards with gradient border, progress bar per goal
+- [ ] **Goal detail / Project screen** — redesigned subtask list
+- [ ] **Tasks screen** — tab bar (Pending | Completed), colored card items
+- [ ] **Profile screen** (new) — streak counter placeholder, weekly summary placeholder, sign out
+- [ ] Auth screens (login/signup) — apply new theme
+- [ ] All strings updated in `core/config/strings.dart`
+- [ ] Bug fixes merged: back button + TextEditingController crash
+
+### Behavioral Psychology Built In (Phase 1.5 data only)
+| Principle | Implementation |
+|---|---|
+| Goal gradient | Progress bar fills as subtasks complete |
+| Variable reward | Checkbox animates + color burst on completion |
+| Implementation intention | Today screen: "Here's what you're doing today" |
+| Loss aversion | Streak counter visible (placeholder, real in Phase 2) |
+| Zeigarnik effect | Incomplete items shown first |
+| Progress visibility | Circular ring shows X/Y tasks done today |
+
+**Done when:** App looks colorful and motivating, all screens reachable via bottom nav, no deep nesting, tested on Android device.
 
 ---
 
@@ -49,13 +104,14 @@ Each phase produces a shippable, usable product. Never start a phase until the p
 **Goal:** The app feels alive. Users are motivated to return daily.
 
 ### Deliverables
+- [ ] Tags (create and attach to goals/projects/tasks — deferred from Phase 1)
 - [ ] Habits (create, log daily, streak tracking)
 - [ ] Dailies (pinned daily must-dos)
 - [ ] Recurring tasks (RRULE-based)
 - [ ] Analytics dashboard (completion rate, streaks, daily check-in)
 - [ ] Progress indicators (% complete on projects)
 - [ ] Reminders (local push notifications)
-- [ ] Gamification basics (streak counter, completion badges)
+- [ ] Gamification basics (real streak counter, completion badges, XP)
 - [ ] Weekly review screen ("You completed 23 tasks this week")
 
 **Done when:** User has a reason to open the app every day, not just when creating tasks.
