@@ -10,10 +10,14 @@ and every gotcha we hit gets explained here. It grows as the project grows.
 2. [How Real Software Projects Are Structured](#2-how-real-software-projects-are-structured)
 3. [The Tools We Use and Why](#3-the-tools-we-use-and-why)
 4. [Clean Architecture — The Core Pattern](#4-clean-architecture)
-5. [Phase 0 — What We Built and Why](#5-phase-0-what-we-built-and-why)
-6. [Phase 1 PR 1 — The Domain Layer](#6-phase-1-pr-1-the-domain-layer)
-7. [Gotchas and Hard-Won Lessons](#7-gotchas-and-hard-won-lessons)
-8. [What to Study Next](#8-what-to-study-next)
+5. [Phase 0 — Foundation](#5-phase-0-what-we-built-and-why)
+6. [Phase 1 PR 1 — Domain Layer](#6-phase-1-pr-1-the-domain-layer)
+7. [Phase 1 PR 2 — Data Layer](#7-phase-1-pr-2-the-data-layer)
+8. [Phase 1 PR 3 — Presentation Layer](#8-phase-1-pr-3-the-presentation-layer)
+9. [Phase 1 PR 4 — Sync Service](#9-phase-1-pr-4-sync-service)
+10. [Phase 1.5 — UI Overhaul](#10-phase-15-ui-overhaul)
+11. [Gotchas and Hard-Won Lessons](#11-gotchas-and-hard-won-lessons)
+12. [What to Study Next (Phase 2)](#12-what-to-study-next-phase-2)
 
 ---
 
@@ -108,6 +112,9 @@ Managing state means deciding: where does data live? How does the UI know when i
 Think of providers as smart containers that your widgets subscribe to. When the container
 updates, only the widgets that care about it rebuild.
 
+We use `@riverpod` code generation — you write the logic, Riverpod generates the boilerplate.
+`AsyncNotifier` is the main pattern: a provider that manages async data (like a list from DB).
+
 - [Riverpod docs](https://riverpod.dev/)
 - [Why Riverpod? (Remi Rousselet's explanation)](https://riverpod.dev/docs/introduction/why_riverpod)
 
@@ -172,18 +179,22 @@ result.fold(
 ```
 
 - [fpdart docs](https://pub.dev/packages/fpdart)
-- [What is Either? (simple explanation)](https://medium.com/@yauhen.belski/either-in-dart-with-fpdart-6b0d7e0a9fac)
 
 ### go_router (navigation)
 Handles navigation between screens. URL-based routing means the app has real URLs
-(`/goals/123/projects`) which enables deep links, web support, and browser back button.
+(`/goals/123`) which enables deep links, web support, and browser back button.
+
+Key concepts used:
+- **GoRoute** — a single route (screen)
+- **ShellRoute** — a wrapper route that persists UI (our bottom nav bar) across child routes
+- **redirect callback** — runs on every navigation, lets you redirect unauthenticated users
 
 - [go_router docs](https://pub.dev/packages/go_router)
 
 ### Sentry (error monitoring)
 When the app crashes or throws an error in the real world, Sentry captures it, sends you
 an alert, and shows you the full stack trace, device info, and breadcrumbs (what the user
-was doing before the crash). Without this, you're flying blind in production.
+was doing before the crash).
 
 - [Sentry Flutter docs](https://docs.sentry.io/platforms/flutter/)
 
@@ -268,7 +279,6 @@ lib/features/tasks/
 ### Resources
 - [Clean Architecture (Robert C. Martin's original article)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 - [Clean Architecture in Flutter (Reso Coder — highly recommended)](https://resocoder.com/flutter-clean-architecture-tdd/)
-- [Very Good Architecture (VGV talk)](https://verygood.ventures/blog/very-good-flutter-architecture)
 
 ---
 
@@ -278,60 +288,26 @@ Phase 0 is pure infrastructure — zero features, but the skeleton of a professi
 
 ### What we built
 
-**Project structure**
-The full `lib/` folder structure following Clean Architecture. Empty folders with `.gitkeep`
-files hold the places where future code will go.
+**Flutter flavors**: Three entry points: `main_dev.dart`, `main_staging.dart`, `main_prod.dart`.
 
-**Flutter flavors**
-Three entry points: `main_dev.dart`, `main_staging.dart`, `main_prod.dart`. Each calls
-`bootstrap(AppFlavor.dev/staging/prod)` which loads different `.env` files.
+**Environment config** (`lib/core/config/env.dart`): Reads Supabase URL, Supabase anon key,
+Sentry DSN from `.env` files. Never hardcoded. `.env` files are gitignored.
 
-**Environment config** (`lib/core/config/env.dart`)
-Reads Supabase URL, Supabase anon key, Sentry DSN from `.env` files. Never hardcoded.
-`.env` files are gitignored — `.env.example` shows what keys are needed without values.
+**Drift database** (`lib/core/database/app_database.dart`): Empty database (schema v1, no tables).
+Phase 1 adds the tables.
 
-**Drift database** (`lib/core/database/app_database.dart`)
-An empty database (schema v1, no tables yet). Phase 1 adds the tables. The empty setup
-proves the database layer compiles and connects correctly.
+**GitHub Actions CI** (`.github/workflows/pr.yml`): On every PR — pub get → build_runner →
+create .env → dart format check → flutter analyze → flutter test → coverage check →
+Android build → Web build.
 
-**Supabase initialization** (`lib/bootstrap.dart`)
-`Supabase.initialize()` runs before the app starts. Makes the Supabase client available.
+**Branch protection**: `main` is protected. No direct pushes. PRs must pass CI.
 
-**Sentry initialization** (`lib/bootstrap.dart`)
-`SentryFlutter.init()` wraps the whole app. Any uncaught exception automatically goes to
-Sentry. We also have `SentryService.captureException()` for manually captured errors.
-
-**go_router** (`lib/core/router/app_router.dart`)
-One route (`/`) pointing to a placeholder `HomeScreen`. Actual routes added in Phase 1 PR 3.
-
-**GitHub Actions CI** (`.github/workflows/pr.yml` and `main.yml`)
-- `pr.yml`: On every PR — pub get → build_runner → create .env → dart format check →
-  flutter analyze → flutter test → coverage check → Android build → Web build
-- `main.yml`: On merge to main — same + staging deploy
-
-**Branch protection**
-`main` is protected. No direct pushes. PRs must pass CI. This forces the workflow:
-feature branch → PR → CI green → merge.
-
-### The gotchas we hit in Phase 0 (and what we learned)
-
-1. **CI Flutter version mismatch**: CI was set to Flutter 3.27.0 but pubspec required
-   Dart 3.11.0 (only available in Flutter 3.41.2). Lesson: always match CI Flutter version
-   to your local version.
-
-2. **`.env` files missing on CI**: The analyzer checks that assets declared in pubspec.yaml
-   exist on disk. `.env` files are gitignored so they don't exist in CI. Fix: create fake
-   `.env` files from GitHub Secrets BEFORE running the analyze step.
-
-3. **`dart format` differences**: Windows and Linux format Dart code slightly differently.
-   The CI (Linux) detected formatting that didn't match what Windows wrote. Fix: always run
-   `dart format .` locally before committing.
-
-4. **Flutter web doesn't support `--flavor`**: `flutter build web --flavor dev` fails.
-   Web builds use the `-t` (target) flag to pick the entry point instead.
-
-5. **Deprecated Sentry API**: `scope.setExtra()` was replaced by `scope.setContexts()`.
-   Lesson: always check for deprecation warnings in analyze output.
+### The gotchas we hit in Phase 0
+1. **CI Flutter version mismatch** — Always match CI Flutter version to your local version.
+2. **`.env` files missing on CI** — Create fake `.env` files from GitHub Secrets BEFORE running the analyze step.
+3. **`dart format` differences** — Windows and Linux format Dart code slightly differently. Run `dart format .` locally before committing.
+4. **Flutter web doesn't support `--flavor`** — Use `-t lib/main_dev.dart` instead.
+5. **Deprecated Sentry API** — `scope.setExtra()` was replaced by `scope.setContexts()`.
 
 ---
 
@@ -339,86 +315,295 @@ feature branch → PR → CI green → merge.
 
 ### What we built
 
-**5 entities** (the core data objects)
+**5 entities** (Freezed, immutable, pure Dart):
 
-| Entity | File | What it represents |
-|---|---|---|
-| `Goal` | `features/goals/domain/entities/goal.dart` | A high-level ambition (e.g. "Learn ML") |
-| `Project` | `features/projects/domain/entities/project.dart` | A structured effort under a goal |
-| `Subtask` | `features/projects/domain/entities/subtask.dart` | A step within a project |
-| `Task` | `features/tasks/domain/entities/task.dart` | A standalone action item |
-| `AppUser` | `features/auth/domain/entities/app_user.dart` | The signed-in user |
-
-All entities use **Freezed** — they're immutable and have `copyWith()`.
-
-**5 repository interfaces** (contracts — *what* can be done, not *how*)
-
-| Interface | Operations |
+| Entity | What it represents |
 |---|---|
-| `IGoalRepository` | getGoals, createGoal, updateGoal, archiveGoal |
-| `IProjectRepository` | getProjects, getProjectsByGoal, createProject, updateProject, archiveProject |
-| `ISubtaskRepository` | getSubtasksByProject, createSubtask, updateSubtask, updateSubtaskStatus |
-| `ITaskRepository` | getTasks, getTasksDueToday, createTask, updateTaskStatus |
-| `IAuthRepository` | signIn, signUp, signOut, getCurrentUser, authStateChanges (Stream) |
+| `Goal` | A high-level ambition ("Learn ML") with status, intention, deadline |
+| `Project` | A structured effort under a goal with priority and status |
+| `Subtask` | A step within a project with sort order and recurrence fields |
+| `Task` | A standalone action item with dueDate and recurring support |
+| `AppUser` | The signed-in user (id + email) |
 
-**21 use cases** (one class per user action)
+**5 repository interfaces** — contracts saying *what* is possible, not *how*.
 
-Every use case follows the exact same pattern:
+**21 use cases** — one class per user action, all following the same pattern:
 ```dart
 class CreateGoal {
   final IGoalRepository _repository;
-  const CreateGoal(this._repository);          // takes the interface, not the implementation
+  const CreateGoal(this._repository);
 
-  Future<Either<Failure, Goal>> call(Goal goal) =>
-      _repository.createGoal(goal);            // delegates to repository, returns Either
+  Future<Either<Failure, Goal>> call(Goal goal) => _repository.createGoal(goal);
 }
 ```
 
-Why one class per use case instead of one class per feature?
-- Each class has a single responsibility (Single Responsibility Principle)
-- Easy to test in isolation — just test `CreateGoal`, not a giant `GoalService`
-- Easy to see what the app can do — every use case file is one action
+**38 unit tests** — every use case tested against a mocktail mock repository.
 
-**38 unit tests** — every use case is tested against a mock repository.
-
-### Why Goals get their own feature folder
-Goals are NOT inside `features/projects/`. They're at `features/goals/`.
-
-This is because Goals are an **aggregate root** — an independent concept that projects can
-optionally belong to. In Phase 3, the AI Planner will create Goals directly without any
-Projects. If Goals were nested inside Projects, that wouldn't make sense. Architecture
-decisions like this prevent painful rewrites later.
-
-### The fpdart `Task` name collision
-The `fpdart` package exports a type called `Task` (a functional programming concept —
-a lazy async computation). Our entity is also called `Task`. When both are imported,
-Dart doesn't know which one you mean → error.
-
-Fix: `import 'package:fpdart/fpdart.dart' hide Task;`
-
-This tells Dart: "import everything from fpdart EXCEPT Task". Applied to every file in
-the tasks feature that uses both fpdart and the Task entity.
-
-### The mocktail `registerFallbackValue` requirement
-When a test uses `any()` as an argument matcher (e.g., "match any Task"), mocktail needs
-to know what type `any()` is matching so it can create a typed placeholder. For built-in
-types (String, int), mocktail handles this automatically. For custom types (Goal, Task,
-SubtaskStatus), you must register a fallback value first:
-
-```dart
-setUpAll(() {
-  registerFallbackValue(_makeTask());         // for Task
-  registerFallbackValue(TaskStatus.pending);  // for TaskStatus enum
-});
-```
-
-`setUpAll` runs once before all tests in the file. `setUp` runs before each individual test.
+### Key lessons
+- **Goals are an aggregate root** — they live at `features/goals/`, NOT inside `features/projects/`. Phase 3's AI Planner will create Goals without Projects. Architecture decisions like this prevent painful rewrites.
+- **fpdart `Task` name collision** — `hide Task` on the fpdart import in all task files.
+- **mocktail `registerFallbackValue`** — needed for every custom type used with `any()`.
 
 ---
 
-## 7. Gotchas and Hard-Won Lessons
+## 7. Phase 1 PR 2 — The Data Layer
 
-These are things that aren't obvious from tutorials but will trip you up.
+### What we built
+
+**Drift tables** (schema version 2 — upgraded from Phase 0's empty v1):
+
+Every table has these standard columns:
+- `id TEXT` — UUID primary key (Drift doesn't have a native UUID type, so TEXT it is)
+- `syncStatus TEXT` — `'synced'` or `'pendingUpload'` — this is how the sync service knows what to push
+- `createdAt`, `updatedAt` — DateTime columns for last-write-wins conflict resolution
+
+```dart
+class TasksTable extends Table {
+  TextColumn get id => text()();
+  TextColumn get userId => text()();
+  TextColumn get title => text()();
+  // ...
+  TextColumn get syncStatus => text().withDefault(const Constant('pendingUpload'))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+```
+
+**Database migrations**: When you change the database schema (add a table, add a column),
+you must tell Drift how to upgrade existing databases. Schema version went from 1 → 2,
+and `MigrationStrategy.onUpgrade` creates all new tables for users upgrading from v1.
+
+```dart
+@override
+MigrationStrategy get migration => MigrationStrategy(
+  onUpgrade: (m, from, to) async {
+    if (from < 2) {
+      await m.createTable(goalsTable);
+      // ... all tables
+    }
+  },
+);
+```
+
+**Why migrations matter**: Real users have data in their phone's SQLite database. If you
+add a table without a migration, their app will crash when it tries to use a table that
+doesn't exist. Migrations run automatically when the app starts after an update.
+
+**Data models** (`GoalModel`, `TaskModel`, etc.): Each model has three conversion methods:
+- `fromRow(row)` — converts a Drift database row into a domain entity
+- `toCompanion(entity)` — converts a domain entity into what Drift needs to write to DB
+- `toRemoteMap(entity)` / `fromRemoteMap(map)` — converts to/from Supabase JSON format
+
+**Local datasources** (e.g., `GoalLocalDatasource`): Wrap Drift queries. The datasource
+handles SQL; the repository handles business logic. This separation means you can test
+each in isolation.
+
+**Repository implementations** (e.g., `GoalRepositoryImpl`): Write to local Drift first
+(instant, offline-safe), then attempt Supabase in the background. Catches exceptions and
+converts them to typed `Failure` objects that the domain layer can understand.
+
+**Auth datasource** (Supabase only — no local table needed): Supabase handles session
+persistence automatically — no need to store tokens yourself.
+
+### Key lessons
+- **Write local first, sync later** — this is what makes the app offline-capable. If Supabase is down or there's no internet, the user never notices.
+- **syncStatus column** — the bridge between local and remote. Every write sets it to `'pendingUpload'`. The sync service reads this to know what to push.
+- **Testing datasources with a real in-memory DB** — Drift's `NativeDatabase.memory()` lets you run actual SQL in tests without touching files. This is more reliable than mocks for DB tests.
+
+---
+
+## 8. Phase 1 PR 3 — The Presentation Layer
+
+### What we built
+
+**go_router auth guard** — A `redirect` callback that runs before every navigation:
+```dart
+redirect: (context, state) {
+  final isAuth = authState.valueOrNull != null;
+  final isOnAuth = state.matchedLocation == '/login' || state.matchedLocation == '/signup';
+  if (!isAuth && !isOnAuth) return '/login';  // redirect to login if not signed in
+  if (isAuth && isOnAuth) return '/today';    // redirect to home if already signed in
+  return null;  // no redirect needed
+},
+```
+
+**Riverpod `AsyncNotifier` pattern** — the standard pattern for managing async lists:
+```dart
+@riverpod
+class GoalList extends _$GoalList {
+  @override
+  Future<List<Goal>> build() => ref.watch(getGoalsProvider).call();
+
+  Future<void> create({required String title, required String intention}) async {
+    final result = await ref.read(createGoalProvider).call(/* ... */);
+    result.fold(
+      (f) => state = AsyncError(f, StackTrace.current),
+      (_) => ref.invalidateSelf(),  // refresh the list
+    );
+  }
+}
+```
+
+When `invalidateSelf()` is called, `build()` re-runs and all widgets watching this provider
+get the updated list. Clean and automatic.
+
+**ConsumerWidget vs ConsumerStatefulWidget**:
+- Use `ConsumerWidget` (simpler) when there's no local state (most screens)
+- Use `ConsumerStatefulWidget` when you need `TextEditingController`, `FocusNode`, or `AnimationController` — anything that needs `initState()` / `dispose()`
+
+**TextEditingController lifecycle** (a common crash source):
+```dart
+// WRONG — creates controller in build(), leaks memory:
+Widget build(BuildContext context, WidgetRef ref) {
+  final controller = TextEditingController(); // new controller every rebuild!
+
+  // RIGHT — use dialog-scoped controller:
+  Future<void> _showDialog() async {
+    final controller = TextEditingController();
+    await showDialog(builder: (ctx) => AlertDialog(/* uses controller */));
+    controller.dispose(); // clean up after dialog closes
+  }
+}
+```
+
+**ShellRoute** — a go_router concept where a wrapper widget persists while child routes
+change. Our bottom nav bar is implemented this way. The key insight: detail routes (like
+`/goals/:id`) are defined OUTSIDE the ShellRoute so the bottom nav disappears on them.
+
+### Key lessons
+- **Never create controllers in `build()`** — use `ConsumerStatefulWidget` with `dispose()`, or dialog-scoped controllers disposed after the dialog closes.
+- **`ref.invalidateSelf()`** is the go-to for "I changed data, refresh the list".
+- **Detail routes outside the shell** — prevents bottom nav showing on detail screens.
+
+---
+
+## 9. Phase 1 PR 4 — Sync Service
+
+### What we built
+
+`lib/core/sync/sync_service.dart` — a class that syncs local Drift data with Supabase.
+
+**Push (local → remote)**:
+1. Query Drift for all rows where `syncStatus = 'pendingUpload'`
+2. Upsert them to Supabase (insert if new, update if exists — conflict-safe)
+3. If upsert succeeds: mark those rows as `syncStatus = 'synced'`
+4. If upsert fails: leave them as `pendingUpload` (they'll retry next sync)
+
+**Pull (remote → local)**:
+1. Find the latest `updatedAt` timestamp in local Drift
+2. Ask Supabase for all rows newer than that timestamp
+3. Upsert them into local Drift, marking them `synced`
+
+**Conflict resolution: last-write-wins**
+If a row exists both locally and remotely with different data, the one with the newer
+`updatedAt` timestamp wins. This is the simplest correct strategy. It's not perfect
+(if you edit the same task on two devices offline simultaneously, you'll lose one edit),
+but it handles 99% of real-world cases well.
+
+**Triggered by**: app startup, sign-in. In Phase 4+, also triggered by app resume (using
+`WidgetsBindingObserver`).
+
+**Error handling**: Sync errors are swallowed (not shown to the user). Sync is best-effort
+— the app works fully without it. Errors are logged to Sentry.
+
+### Why sync is hard (and why we kept it simple)
+Real-time sync with offline support is one of the hardest problems in software. We avoid
+complexity by:
+- Never deleting rows (we archive/status-change them)
+- Last-write-wins for conflicts
+- Single-user (no multi-user concurrency yet)
+- Pull on startup, not real-time
+
+### Key lesson
+- **`syncStatus` column** — this column is what makes the whole sync strategy work. Without it, you'd have to compare every row against every remote row on every sync (O(n²) nightmare). With it, you only push what changed.
+
+---
+
+## 10. Phase 1.5 — UI Overhaul
+
+### Why this phase existed
+Phase 1 was functional but visually bare — white theme, no bottom nav, deep screen nesting.
+Testing on an Android device showed the UI actively discourages daily use. The fix wasn't
+"make it prettier" — it was "redesign with behavioral psychology in mind."
+
+### Behavioral psychology applied to UI design
+
+**Goal gradient effect**: People work harder as they get closer to a goal. A progress bar
+that goes from 0% → 10% → 50% → 100% is more motivating than a number count. We added
+progress bars everywhere: subtasks in project detail, today's tasks in the circular ring.
+
+**Zeigarnik effect**: Incomplete tasks stay in your working memory until done. We sort lists
+pending-first, completed-last. This makes incomplete items visible and creates mild mental
+tension that drives completion.
+
+**Variable reward**: Unpredictable rewards are more addictive than predictable ones (slot
+machines use this). The completion ring turns emerald AND changes text at 100%. The color
+change is a small surprise that rewards the behavior.
+
+**Implementation intention**: People who plan *exactly* what they'll do are far more likely
+to do it. The Today screen shows "here's what you're doing today" rather than a generic
+backlog — it removes the decision of what to work on.
+
+**Loss aversion**: Losing something hurts more than gaining something equivalent feels good.
+The streak counter (placeholder now, real in Phase 2) will make users afraid to break their
+streak — more powerful than showing "days completed".
+
+### Key Flutter patterns used
+
+**Material 3 custom ColorScheme** (not `ColorScheme.fromSeed`):
+`fromSeed` generates colors algorithmically from one seed color. We want exact hex values
+for each color, so we use `const ColorScheme(...)` with every field explicitly set.
+
+**`withValues(alpha: 0.12)`** instead of `withOpacity(0.12)`:
+Flutter deprecated `withOpacity()` — it doesn't properly handle different color spaces.
+`withValues(alpha:)` is the correct modern API.
+
+**ShellRoute + detail routes outside shell**:
+The bottom nav is in a `ShellRoute`. When you tap a goal card, `context.push('/goals/id')`
+navigates to a route defined OUTSIDE the shell — so the bottom nav disappears automatically,
+and the back button appears. This is how navigation should work on mobile: full-screen detail
+views, bottom nav only on main tabs.
+
+**Diamond FAB** (`Transform.rotate(angle: pi/4)`):
+A square container rotated 45° looks like a diamond visually. Flutter's layout engine still
+treats it as a square (no layout impact). The icon inside is counter-rotated -45° to stay
+upright. `FloatingActionButtonLocation.centerDocked` with `extendBody: true` lets content
+scroll under the nav bar.
+
+**Gradient border trick**:
+Flutter has no direct gradient border property. The trick: outer `Container` with gradient
+`BoxDecoration` + `padding: 1.5` + inner `Container` with solid background. The visible
+"border" is actually the gradient peeking through the padding gap.
+
+### Key lessons from Phase 1.5 CI failures
+
+**Android Gradle Plugin (AGP) versions**:
+Android Studio will sometimes auto-upgrade your AGP in `settings.gradle.kts` when you sync
+or accept upgrade prompts. The new version may not yet be on Google Maven (the server where
+Gradle downloads plugins from). When CI runs `flutter build apk`, it downloads AGP fresh
+from Google Maven — if that version doesn't exist there, the build fails.
+
+Rule: after any Android Studio Gradle sync, check `android/settings.gradle.kts`. If it
+bumped AGP to a version > 8.10.x, revert it until you've verified it's on Maven.
+
+**AGP ↔ dependency compatibility**:
+Each AGP version sets a minimum for the `androidx.*` dependencies it can process.
+`androidx.core:1.17.0` requires AGP ≥ 8.9.1. Going too low also breaks things.
+
+**Flutter's Kotlin minimum**:
+Flutter 3.41.2 requires Kotlin ≥ 2.1.0. The warning appears at build time and will become
+an error in a future Flutter version. Keep Kotlin at 2.1.x.
+
+**Widget tests must match the actual UI**:
+When we redesigned the screens, some widget tests referenced strings or widget keys that
+no longer existed (e.g., a sign-out button that moved from Goals to Profile, "Today" title
+that became a greeting). The lesson: widget tests are specifications — when you intentionally
+change UI behavior, update the tests to match the new spec.
+
+---
+
+## 11. Gotchas and Hard-Won Lessons
 
 | Gotcha | The Fix | Why It Happens |
 |---|---|---|
@@ -430,46 +615,108 @@ These are things that aren't obvious from tutorials but will trip you up.
 | Formatting check fails on CI | `dart format .` before every commit | Windows/Linux format code differently |
 | Push to main rejected (GH006) | Create a PR branch, push there, open PR | Branch protection prevents direct pushes |
 | Generated files cause errors | `dart run build_runner build` | `*.g.dart` and `*.freezed.dart` are gitignored |
+| `withOpacity()` deprecation warning | Use `.withValues(alpha: 0.5)` instead | Flutter updated Color API for color space correctness |
+| `CardTheme` type error in Flutter 3.x | Use `CardThemeData`, `DialogThemeData`, `BottomAppBarThemeData`, `TabBarThemeData` | Flutter renamed these types to match Material 3 conventions |
+| `(_, __)` lint warning | Use `(_, _)` — Dart 3.x wildcard pattern | `unnecessary_underscores` lint flags `__` as redundant |
+| AGP version not found on CI | Keep AGP at 8.9.1–8.10.x; do NOT blindly accept Android Studio upgrades | New AGP versions appear on Maven days-weeks after Studio suggests them |
+| Kotlin deprecated warning becomes error | Keep Kotlin at ≥ 2.1.0 | Flutter drops support for old Kotlin versions |
+| TextEditingController leak/crash | Dispose after dialog closes; use `ConsumerStatefulWidget` for screen-level controllers | Controllers created in `build()` are never disposed |
 
 ---
 
-## 8. What to Study Next
+## 12. What to Study Next (Phase 2)
 
-As we go through each phase, here are the concepts you'll encounter. Study these before
-or while we implement them.
+Phase 2 introduces Habits — the most behaviorally complex feature so far. Here's what to
+understand before we build it.
 
-### For Phase 1 PR 2 (Data Layer — coming next)
-- **SQLite basics** — what tables, columns, primary keys, and foreign keys are
-  - [SQLite tutorial](https://www.sqlitetutorial.net/) — do the first 5 lessons
-- **Drift tables in Dart** — how to define tables as Dart classes
-  - [Drift getting started](https://drift.simonbinder.eu/docs/getting-started/)
-- **Database migrations** — what happens when you change the schema after users have data
-  - [Drift migrations](https://drift.simonbinder.eu/docs/advanced-features/migrations/)
-- **Repository pattern** — why we wrap the database behind an interface
-  - [Repository pattern explained](https://medium.com/@pererikbergman/repository-design-pattern-e28c0f3e4a30)
+### Habits and recurring data patterns
 
-### For Phase 1 PR 3 (Presentation Layer)
-- **Riverpod AsyncNotifier** — the state management pattern we use for data lists
-  - [Riverpod AsyncNotifier tutorial](https://riverpod.dev/docs/essentials/side_effects)
-- **go_router auth redirect** — how to redirect unauthenticated users to login
-  - [go_router redirect docs](https://pub.dev/documentation/go_router/latest/topics/Redirection-topic.html)
-- **Flutter form handling** — TextEditingController, validation, submit
-  - [Flutter forms cookbook](https://docs.flutter.dev/cookbook/forms)
+**What makes habits different from tasks?**
+A task is completed once and done. A habit is completed repeatedly — daily, weekly, etc.
+The data model needs to track both the habit definition (title, frequency) and the completion
+history (which days it was done). These are two separate tables with a one-to-many relationship.
 
-### For Phase 1 PR 4 (Sync Service)
-- **Supabase upsert** — insert or update if exists (for conflict-safe sync)
-  - [Supabase upsert docs](https://supabase.com/docs/reference/dart/upsert)
-- **Background services in Flutter** — running sync without blocking the UI
-  - [Dart async/await explained](https://dart.dev/codelabs/async-await)
+```
+habits table:
+  id, title, frequency('daily'/'weekly'), targetCount, color, userId
 
-### General concepts worth understanding deeply
-- **Dart async/await** — how Future and Stream work in Dart
-  - [Dart async docs](https://dart.dev/codelabs/async-await)
-- **Functional programming basics** — what Either, Option, and pure functions are
-  - [FP for the confused (readable intro)](https://dev.to/shakib609/functional-programming-basics-in-dart-4bh4)
-- **Dependency injection** — how providers pass dependencies without global variables
-  - [DI explained simply](https://medium.com/@yauhen.belski/dependency-injection-in-flutter-with-riverpod-e4c5b0a7e5d8)
+habit_completions table:
+  id, habitId, date, count
+```
+
+**Study**: [One-to-many relationships in SQL](https://www.sqlitetutorial.net/sqlite-foreign-key/)
+
+### Streak calculations
+
+A streak is the number of consecutive days/periods where a habit was completed.
+Calculating this from a list of completion records requires:
+1. Sort completions by date (newest first)
+2. Walk backwards — count consecutive days until you find a gap
+3. Handle "today" vs "yesterday" (a habit not yet done today doesn't break the streak)
+
+This is **business logic** — it goes in the domain layer (a use case or entity method),
+not in the UI or database layer.
+
+**Study**: Work through how you'd write this algorithm in plain Dart before we build it.
+
+### RRULE (Recurrence Rule)
+
+Our `Task` entity already has a `recurrenceRule` field (a string). In Phase 2 we'll actually
+use it. RRULE is an industry standard from the iCalendar spec:
+
+```
+RRULE:FREQ=DAILY              → every day
+RRULE:FREQ=WEEKLY;BYDAY=MO,WE → every Monday and Wednesday
+RRULE:FREQ=MONTHLY;BYMONTHDAY=1 → first of every month
+```
+
+We won't parse RRULE ourselves — there are packages like `rrule` for Dart that handle it.
+
+**Study**: [RRULE spec overview](https://icalendar.org/iCalendar-RFC-5545/3-8-5-3-recurrence-rule.html) (just skim to understand the format)
+
+### Local notifications in Flutter
+
+`flutter_local_notifications` package lets you schedule notifications that appear even when
+the app is closed. Key concepts:
+- **Scheduling**: "Show at 8am every day"
+- **Permission requests**: Must ask user to allow notifications (especially on iOS)
+- **Notification payload**: Data attached to a notification so tapping it can navigate to the right screen
+
+**Study**: [flutter_local_notifications docs](https://pub.dev/packages/flutter_local_notifications)
+
+### Riverpod `family` modifier
+
+Some providers need a parameter — e.g., "get habit completions for habitId X".
+Riverpod's `family` modifier handles this:
+
+```dart
+@riverpod
+Future<List<HabitCompletion>> habitCompletions(Ref ref, String habitId) async {
+  return ref.watch(getHabitCompletionsProvider(habitId)).call();
+}
+```
+
+We already use this pattern for `projectListProvider(goalId)` and `subtaskListProvider(projectId)`.
+
+**Study**: [Riverpod family modifier](https://riverpod.dev/docs/concepts/modifiers/family)
+
+### Tags and polymorphic junction tables
+
+Tags can be attached to goals, projects, AND tasks — three different entity types. The
+cleanest data model is a polymorphic junction table:
+
+```sql
+entity_tags:
+  entity_id    TEXT  -- the id of the goal/project/task
+  entity_type  TEXT  -- 'goal', 'project', or 'task'
+  tag_id       TEXT
+```
+
+This is more flexible than having separate `goal_tags`, `project_tags`, `task_tags` tables,
+but requires careful querying. We'll build this in Phase 2 PR 10.
+
+**Study**: [Polymorphic associations explained](https://medium.com/@veereshbadiger/polymorphic-associations-in-sql-7e43a94b06e1)
 
 ---
 
-*This file is updated at the end of every phase/PR. Last updated: Phase 1 PR 1 merged.*
+*This file is updated at the end of every phase/PR. Last updated: Phase 1.5 complete, starting Phase 2.*
