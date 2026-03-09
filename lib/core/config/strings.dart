@@ -43,6 +43,20 @@ class AppStrings {
   static const activeGoals = 'Active Goals';
   static const dueToday = 'Due Today';
   static const addNew = 'Add New';
+  static const pending = 'Pending';
+  static const completed = 'Completed';
+
+  // Greetings
+  static const goodMorning = 'Good morning';
+  static const goodAfternoon = 'Good afternoon';
+  static const goodEvening = 'Good evening';
+
+  // Today screen
+  static const tasksDoneToday = 'tasks done today';
+  static const allDoneToday = 'All done for today! 🎉';
+  static const noGoalsActiveYet = 'No active goals yet.';
+  static const nothingScheduledToday =
+      'Nothing scheduled today.\nTap + to add a task.';
 
   // Profile screen
   static const streakComingInPhase2 = 'Streaks coming in Phase 2';
