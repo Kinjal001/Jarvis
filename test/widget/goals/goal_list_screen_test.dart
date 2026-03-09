@@ -108,10 +108,6 @@ void main() {
       expect(find.text('Build Jarvis'), findsOneWidget);
     });
 
-    testWidgets('shows sign-out button', (tester) async {
-      await tester.pumpWidget(_buildTestApp([]));
-      await tester.pump();
-      expect(find.byKey(const Key('sign_out_button')), findsOneWidget);
-    });
+    // Sign-out was moved to the Profile tab in Phase 1.5 — no longer on this screen.
   });
 }

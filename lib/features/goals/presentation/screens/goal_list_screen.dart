@@ -236,12 +236,7 @@ class _EmptyGoals extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'No goals yet',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Set your first goal and start\nbuilding towards it.',
+              AppStrings.noGoalsYet,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),

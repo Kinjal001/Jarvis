@@ -65,10 +65,10 @@ Widget _buildTestApp({
 
 void main() {
   group('HomeScreen', () {
-    testWidgets('renders Today title', (tester) async {
+    testWidgets('renders Due Today section heading', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pump();
-      expect(find.text(AppStrings.today), findsWidgets);
+      expect(find.text(AppStrings.dueToday), findsWidgets);
     });
 
     testWidgets('shows empty-state when no tasks are due today', (

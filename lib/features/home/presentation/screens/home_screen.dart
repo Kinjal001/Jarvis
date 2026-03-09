@@ -228,7 +228,7 @@ class HomeScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Center(
                         child: Text(
-                          AppStrings.noGoalsActiveYet,
+                          AppStrings.noActiveGoals,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
@@ -272,7 +272,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   child: Center(
                     child: Text(
-                      AppStrings.nothingScheduledToday,
+                      AppStrings.noTasksDueToday,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
