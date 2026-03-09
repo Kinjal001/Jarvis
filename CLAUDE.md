@@ -12,12 +12,15 @@
 
 ## Current Phase
 
-**Phase 1 — Core Loop** (in progress)
-- Phase 0 — Foundation: **COMPLETE** (CI green, branch protection on main)
-- Phase 1 PR 1 — Domain layer: **MERGED** (entities, repo interfaces, 21 use cases, 38 tests)
-- Phase 1 PR 2 — Data layer: **NEXT** (Drift tables, datasources, repo impls, auth)
+**Phase 2 — Intelligence** (starting now)
+- Phase 0 — Foundation: **COMPLETE**
+- Phase 1 — Core Loop (4 PRs): **COMPLETE** (auth, goals, projects, tasks, sync, unit tests)
+- Phase 1.5 — UI Overhaul (2 PRs + 1 fix): **COMPLETE** (dark theme, bottom nav, behavioral design)
+- Phase 2 — Intelligence: **IN PROGRESS**
 
 See `docs/phases.md` for the full roadmap.
+
+---
 
 ## Critical Code Patterns (Read Before Writing Anything)
 
@@ -27,9 +30,14 @@ See `docs/phases.md` for the full roadmap.
 | Any file importing fpdart + using Task entity | `import 'package:fpdart/fpdart.dart' hide Task;` |
 | mocktail test using `any()` with custom type | `setUpAll(() => registerFallbackValue(instance))` per custom type |
 | CI workflow step order | Create .env files BEFORE the analyze step |
-| Flutter web build | No `--flavor` flag — use `-t lib/main_dart` entry point only |
+| Flutter web build | No `--flavor` flag — use `-t lib/main_dev.dart` entry point only |
 | Committing code | Run `dart format .` first (Windows/Linux formatting differs) |
 | Use case structure | Constructor takes repo; single `call()` returns `Either<Failure, T>` |
+| Opacity on Color | Use `.withValues(alpha: 0.5)` not deprecated `.withOpacity(0.5)` |
+| Flutter 3.x theme types | `CardThemeData`, `DialogThemeData`, `BottomAppBarThemeData`, `TabBarThemeData` (NOT `CardTheme` etc.) |
+| Dart 3.x separator wildcard | Use `(_, _)` not `(_, __)` — double underscore triggers `unnecessary_underscores` lint |
+| Android Gradle Plugin (AGP) | Use 8.9.1 minimum (dependencies require it). Do NOT accept Android Studio auto-upgrade prompts to versions not yet on Google Maven |
+| Kotlin Gradle Plugin | Use 2.1.0 minimum (Flutter requirement). Keep in sync with AGP compatibility |
 
 ---
 
@@ -37,7 +45,7 @@ See `docs/phases.md` for the full roadmap.
 
 | Layer | Technology | Notes |
 |---|---|---|
-| UI Framework | Flutter 3.x | One codebase for all platforms |
+| UI Framework | Flutter 3.41.2 | One codebase for all platforms |
 | State Management | Riverpod 2.x | Type-safe, testable, async-first |
 | Navigation | go_router | URL-based routing, deep links |
 | Local Database | Drift | SQL-based, reactive, all platforms |
@@ -59,14 +67,18 @@ See `docs/phases.md` for the full roadmap.
 
 ```
 lib/
-├── core/           # App-wide infrastructure (DB, network, router, error, config)
-├── features/       # One folder per feature
+├── core/           # App-wide infrastructure (DB, network, router, error, config, theme)
+│   ├── theme/      # AppColors, AppTheme
+│   └── widgets/    # BottomNavShell and other shared widgets
+├── features/
 │   ├── auth/
+│   ├── goals/
 │   ├── projects/
 │   ├── tasks/
-│   ├── habits/
-│   ├── analytics/
-│   ├── ai_planner/
+│   ├── profile/
+│   ├── habits/     # Phase 2
+│   ├── analytics/  # Phase 2
+│   ├── ai_planner/ # Phase 3
 │   └── settings/
 └── main.dart
 ```
@@ -81,6 +93,26 @@ feature/
 
 Full details: `docs/architecture.md`
 Data model: `docs/data-model.md`
+
+---
+
+## UI Design System (Phase 1.5+)
+
+**Theme:** Dark navy-purple, Material 3. `AppTheme.dark` in `lib/core/theme/app_theme.dart`.
+
+**Color system** (`lib/core/theme/app_colors.dart`):
+- Background: `#0D0D1A` | Surface: `#1A1A2E` | Card: `#252540`
+- Primary (violet): `#7C3AED`
+- Entity accent colors: pink=goals, blue=projects, cyan=tasks, violet=habits, amber=streaks/XP, emerald=completed
+
+**Navigation:** ShellRoute with `BottomNavShell` — Today | Goals | ◆ | Tasks | Profile.
+Detail routes (`/goals/:id`, `/projects/:id`) are **outside** the ShellRoute (no bottom nav on detail screens).
+
+**Behavioral design principles baked in:**
+- Goal gradient: progress bars fill as work completes
+- Zeigarnik effect: incomplete items shown before completed
+- Variable reward: colors change on completion
+- Implementation intention: Today screen shows exactly what to do
 
 ---
 
@@ -151,7 +183,7 @@ Run all tests: `flutter test --coverage`
 
 Defined in `.github/workflows/`. See `docs/ci-cd.md` for details.
 
-- **On PR:** lint → test → coverage check → build check
+- **On PR:** lint → test → coverage check → build check (Android + Web)
 - **On merge to main:** above + staging build + Firebase App Distribution upload + Sentry source map upload
 - **On release tag:** prod build → Play Store (Fastlane) → App Store (Fastlane) → Web deploy
 
@@ -166,7 +198,7 @@ Defined in `.github/workflows/`. See `docs/ci-cd.md` for details.
 | PostHog | Product analytics | 1M events/month |
 | Firebase App Distribution | Beta builds | Free |
 | GitHub Actions | CI/CD | 2000 min/month free |
-| Gemini API | AI project planner | Free tier available |
+| Gemini API | AI project planner (Phase 3) | Free tier available |
 
 ---
 
@@ -177,11 +209,15 @@ Defined in `.github/workflows/`. See `docs/ci-cd.md` for details.
 | `CLAUDE.md` | This file — project context for Claude Code |
 | `docs/architecture.md` | Detailed architecture decisions |
 | `docs/data-model.md` | Entity definitions and DB schema |
-| `docs/phases.md` | Build phases and feature roadmap |
-| `docs/phase-0-checklist.md` | User setup checklist (accounts, tools) |
+| `docs/phases.md` | Build phases and feature roadmap with status |
+| `docs/learning-notes.md` | Developer learning journal — concepts explained per phase |
 | `docs/ci-cd.md` | CI/CD pipeline documentation |
 | `.env.example` | Environment variable template |
 | `.github/workflows/` | GitHub Actions pipeline definitions |
+| `lib/core/theme/app_colors.dart` | All color constants |
+| `lib/core/theme/app_theme.dart` | Material 3 ThemeData |
+| `lib/core/widgets/bottom_nav_shell.dart` | Bottom nav + diamond FAB shell |
+| `lib/core/router/app_router.dart` | All routes + auth guard |
 
 ---
 

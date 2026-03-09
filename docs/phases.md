@@ -20,28 +20,33 @@ Each phase produces a shippable, usable product. Never start a phase until the p
 - [x] Flutter flavor build scripts working
 - [x] Basic widget test passing in CI
 
-**Done when:** CI is green, app builds on Android and Web (dev flavor), and Sentry receives a test event.
-
 **STATUS: COMPLETE** — CI green, Android + Web builds passing, branch protection active.
 
 ---
 
 ## Phase 1 — Core Loop
-**Goal:** Users can create and track projects. The fundamental value proposition works.
+**Goal:** Users can create and track goals, projects, tasks. The fundamental value proposition works.
 
 ### Deliverables
 - [x] Auth (sign up, login, logout via Supabase Auth)
 - [x] Goal creation and listing
 - [x] Project creation under a goal (title, description, deadline, priority)
 - [x] Subtask creation under a project
-- [x] Task marking (complete/skip/pending)
-- [x] Basic home screen (today's tasks + active projects)
-- [x] Sync (local Drift ↔ Supabase)
-- [ ] Tags (deferred to Phase 2 — polymorphic junction table complexity)
-- [x] Unit tests for all use cases
-- [ ] Widget tests for key screens (partial — basic tests pass, deeper coverage in Phase 1.5)
+- [x] Task creation and status toggling (complete/pending)
+- [x] Basic home screen (today's tasks + active goals)
+- [x] Local-first Drift database (goals, projects, subtasks, tasks tables)
+- [x] Sync service (local Drift ↔ Supabase, background push/pull)
+- [x] Unit tests for all 21 use cases (38 tests)
+- [x] Data layer unit tests (models, datasources, repository impls)
+- [ ] Tags — deferred to Phase 2 (polymorphic junction table complexity)
 
-**Done when:** A user can sign up, create a goal with projects and subtasks, mark progress, and see it synced on two devices.
+### PR History
+| PR | Branch | What |
+|---|---|---|
+| PR 1 | feature/phase-1-domain | Entities, repo interfaces, 21 use cases, 38 tests |
+| PR 2 | feature/phase-1-data | Drift tables, data models, datasources, repo impls, auth |
+| PR 3 | feature/phase-1-ui | Screens, Riverpod providers, go_router with auth guard |
+| PR 4 | feature/phase-1-sync | SyncService — local ↔ Supabase background sync |
 
 **STATUS: COMPLETE** — 4 PRs merged, CI green, tested on Android device.
 
@@ -51,12 +56,12 @@ Each phase produces a shippable, usable product. Never start a phase until the p
 **Goal:** The app looks and feels like something worth using daily. Behavioral design drives consistency.
 
 ### Why a separate phase?
-Phase 1 shipped a functional but bare-bones UI (white theme, no nav bar, deep nesting). Real-device testing showed the UI discourages daily use. Before adding more features, the presentation layer needs to be rebuilt with intent.
+Phase 1 shipped a functional but bare-bones UI (white theme, no nav bar). Real-device testing showed the UI discourages daily use. Before adding more features, the presentation layer needed to be rebuilt with intent.
 
 ### Design Principles
 - **Dark navy-purple theme** — reduces eye strain, feels premium
 - **Colorful accent system** — each entity type has a distinct color (not monochrome)
-- **Behavioral psychology** — progress bars (goal gradient), streaks (loss aversion), completion rings (variable reward), Today-first layout (implementation intention)
+- **Behavioral psychology** — progress bars (goal gradient), completion rings (variable reward), Today-first layout (implementation intention), incomplete-first sorting (Zeigarnik effect)
 - **Bottom navigation** — no nesting, everything reachable in 1 tap
 - **Habitica-inspired energy** — colorful, alive, rewarding to interact with
 
@@ -70,51 +75,90 @@ Phase 1 shipped a functional but bare-bones UI (white theme, no nav bar, deep ne
 ```
 Bottom Nav: [ Today ] [ Goals ] [ ◆ Add ] [ Tasks ] [ Profile ]
 ```
-Diamond FAB in center (rotated square, violet, elevated above bar).
+Diamond FAB in center (rotated square, violet). Detail routes pushed outside shell (back button, no bottom nav on detail screens).
 
 ### Deliverables
-- [ ] `lib/core/theme/app_colors.dart` — full color constants
-- [ ] `lib/core/theme/app_theme.dart` — Material 3 theme with color scheme
-- [ ] `lib/core/widgets/bottom_nav_shell.dart` — ShellRoute scaffold with bottom nav + diamond FAB
-- [ ] Router updated — ShellRoute wrapping Today/Goals/Tasks/Profile
-- [ ] **Today screen** — greeting, circular completion ring, active goals scroll, today's tasks
-- [ ] **Goals screen** — goal cards with gradient border, progress bar per goal
-- [ ] **Goal detail / Project screen** — redesigned subtask list
-- [ ] **Tasks screen** — tab bar (Pending | Completed), colored card items
-- [ ] **Profile screen** (new) — streak counter placeholder, weekly summary placeholder, sign out
-- [ ] Auth screens (login/signup) — apply new theme
-- [ ] All strings updated in `core/config/strings.dart`
-- [ ] Bug fixes merged: back button + TextEditingController crash
+- [x] `lib/core/theme/app_colors.dart` — full color constants
+- [x] `lib/core/theme/app_theme.dart` — Material 3 dark theme with full ColorScheme
+- [x] `lib/core/widgets/bottom_nav_shell.dart` — ShellRoute scaffold with bottom nav + diamond FAB
+- [x] Router updated — ShellRoute wrapping Today/Goals/Tasks/Profile; detail routes outside shell
+- [x] **Today screen** — greeting, circular completion ring, active goals scroll, today's tasks
+- [x] **Goals screen** — goal cards with gradient left accent bar, status pills
+- [x] **Goal detail screen** — gradient border intention header, project cards
+- [x] **Project detail screen** — progress header (X/Y + %), Zeigarnik-sorted subtask list
+- [x] **Tasks screen** — Pending | Completed tab split, task cards with cyan/emerald accent
+- [x] **Profile screen** (new) — gradient avatar, streak placeholder, sign out
+- [x] Auth screens (login/signup) — gradient J logo, dark inputs
+- [x] All strings in `core/config/strings.dart` (no hardcoded UI text)
+- [x] Bug fix: back button crash + TextEditingController dispose crash
 
-### Behavioral Psychology Built In (Phase 1.5 data only)
-| Principle | Implementation |
-|---|---|
-| Goal gradient | Progress bar fills as subtasks complete |
-| Variable reward | Checkbox animates + color burst on completion |
-| Implementation intention | Today screen: "Here's what you're doing today" |
-| Loss aversion | Streak counter visible (placeholder, real in Phase 2) |
-| Zeigarnik effect | Incomplete items shown first |
-| Progress visibility | Circular ring shows X/Y tasks done today |
+### PR History
+| PR | Branch | What |
+|---|---|---|
+| Fix | fix/navigation-and-controller-crash | Back button + TextEditingController dispose crash |
+| PR 5 | feature/phase-1-5-theme | AppTheme, AppColors, BottomNavShell, ProfileScreen, router |
+| PR 6 | feature/phase-1-5-screens | All 7 screens redesigned with behavioral design patterns |
 
-**Done when:** App looks colorful and motivating, all screens reachable via bottom nav, no deep nesting, tested on Android device.
+**STATUS: COMPLETE** — All PRs merged, CI green, AGP 8.9.1 + Kotlin 2.1.0 confirmed working.
 
 ---
 
 ## Phase 2 — Intelligence
-**Goal:** The app feels alive. Users are motivated to return daily.
+**Goal:** The app feels alive. Users are motivated to return daily. Data gives insight into patterns.
+
+### Core Idea
+Phase 1 + 1.5 gives the skeleton and skin. Phase 2 gives the heartbeat — habits, streaks, and analytics that make opening the app every day feel purposeful and rewarding.
 
 ### Deliverables
-- [ ] Tags (create and attach to goals/projects/tasks — deferred from Phase 1)
-- [ ] Habits (create, log daily, streak tracking)
-- [ ] Dailies (pinned daily must-dos)
-- [ ] Recurring tasks (RRULE-based)
-- [ ] Analytics dashboard (completion rate, streaks, daily check-in)
-- [ ] Progress indicators (% complete on projects)
-- [ ] Reminders (local push notifications)
-- [ ] Gamification basics (real streak counter, completion badges, XP)
-- [ ] Weekly review screen ("You completed 23 tasks this week")
 
-**Done when:** User has a reason to open the app every day, not just when creating tasks.
+**Habits system**
+- [ ] `Habit` entity: title, frequency (daily/weekly/custom RRULE), target count per period, color/icon, active status
+- [ ] `HabitCompletion` entity: habitId, date, count (for countable habits)
+- [ ] Drift tables: `habits`, `habit_completions`
+- [ ] Supabase tables: same schema
+- [ ] Use cases: CreateHabit, GetHabits, LogHabitCompletion, GetHabitCompletions, ArchiveHabit
+- [ ] Habits tab or section on Today screen — daily check-in
+- [ ] Streak calculation: consecutive days with ≥ 1 completion
+
+**Streak system**
+- [ ] Real streak counter on Profile screen (currently placeholder)
+- [ ] Streak calculation: `currentStreak`, `longestStreak` derived from HabitCompletion data
+- [ ] Loss aversion trigger: show streak count prominently, warn when about to break
+
+**Analytics**
+- [ ] Weekly summary screen: "You completed X tasks, Y habits, Z% of subtasks this week"
+- [ ] Completion trend: simple bar chart (7-day, 30-day)
+- [ ] Goal progress: % of subtasks done per active goal
+- [ ] Profile screen upgraded with real data (was all placeholders)
+
+**Tags (deferred from Phase 1)**
+- [ ] `Tag` entity: id, userId, label, color
+- [ ] Junction table: `entity_tags` (entityId, entityType, tagId) — polymorphic
+- [ ] Attach/detach tags on goals, projects, tasks
+- [ ] Filter by tag on Goals and Tasks screens
+
+**Recurring tasks**
+- [ ] RRULE-based recurrence on Task entity (field already in data model)
+- [ ] Auto-generate next occurrence on completion
+- [ ] Show recurring indicator on task cards
+
+**Local notifications**
+- [ ] `flutter_local_notifications` package
+- [ ] Daily reminder: "You have X tasks due today" (morning push)
+- [ ] Streak reminder: "Don't break your streak!" (evening push if no habit logged)
+- [ ] Permission request flow
+
+### PR Plan (4 PRs)
+| PR | Branch | What |
+|---|---|---|
+| PR 7 | feature/phase-2-habits-domain | Habit + HabitCompletion entities, interfaces, use cases |
+| PR 8 | feature/phase-2-habits-data | Drift tables (schema v3), models, datasources, repo impls |
+| PR 9 | feature/phase-2-habits-ui | Habits section on Today, streaks on Profile, analytics cards |
+| PR 10 | feature/phase-2-tags | Tags entity, junction table, attach UI, filter chips |
+
+*Recurring tasks and notifications may be bundled into PR 9 or split further depending on scope.*
+
+**Done when:** User has a reason to open the app every day — habits to check off, streak to protect, weekly progress visible.
 
 ---
 
@@ -123,7 +167,7 @@ Diamond FAB in center (rotated square, violet, elevated above bar).
 
 ### Deliverables
 - [ ] Supabase Edge Function: `ai-plan-project`
-- [ ] Gemini API integration (server-side only)
+- [ ] Gemini API integration (server-side only — key never in app binary)
 - [ ] AI Planner screen: user describes goal, gets structured project + subtasks
 - [ ] User can accept/edit AI-generated plan before saving
 - [ ] AI chat for task guidance ("What should I do today?")
@@ -154,8 +198,9 @@ Diamond FAB in center (rotated square, violet, elevated above bar).
 **Goal:** App is ready for others to use. Feels premium, not like a side project.
 
 ### Deliverables
-- [ ] Full gamification (XP, levels, achievements)
+- [ ] Full gamification (XP, levels, achievements — current streak/XP is placeholder)
 - [ ] Themes (light, dark, AMOLED, custom accent colors)
+- [ ] Checkbox animations (color burst on completion — currently instant)
 - [ ] Home screen widgets (Android + iOS)
 - [ ] Onboarding flow for new users
 - [ ] App Store / Play Store submission
