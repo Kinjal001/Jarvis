@@ -61,3 +61,7 @@ lcov.info
 *.dmg
 *.pkg
 *.msi
+
+# Generated drift web assets (downloaded/compiled at build time)
+web/sqlite3.wasm
+web/drift_worker.js
