@@ -79,5 +79,13 @@ jobs:
       - name: Build Android APK (dev, debug)
         run: flutter build apk --debug --flavor dev -t lib/main_dev.dart
 
+      # sqlite3.wasm is downloaded (not committed) to keep binary out of git.
+      # drift_worker.js is compiled from web/drift_worker.dart at build time.
+      - name: Prepare drift web assets
+        run: |
+          curl -L -o web/sqlite3.wasm \
+            https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-2.9.4/sqlite3.wasm
+          dart compile js -O2 -o web/drift_worker.js web/drift_worker.dart
+
       - name: Build Web (dev)
         run: flutter build web -t lib/main_dev.dart
