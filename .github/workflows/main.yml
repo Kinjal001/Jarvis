@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+# Needed for GitHub Pages deployment
+permissions:
+  contents: write
+
 jobs:
   staging-build:
     name: Build & Deploy Staging
@@ -49,8 +53,19 @@ jobs:
       - name: Build Android APK (staging)
         run: flutter build apk --flavor staging -t lib/main_staging.dart
 
-      - name: Build Web (staging)
-        run: flutter build web -t lib/main_staging.dart
+      # Build web with base-href matching the GitHub Pages repo path.
+      # Uses dev config so the live site talks to the dev Supabase project.
+      - name: Build Web (for GitHub Pages)
+        run: flutter build web -t lib/main_dev.dart --base-href /Jarvis/
+
+      # Deploy build/web to the gh-pages branch.
+      # GitHub Pages serves from that branch automatically.
+      # The live URL will be: https://kinjal001.github.io/Jarvis/
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
 
       # Uncomment when Firebase App Distribution is set up (Phase 5)
       # - name: Upload to Firebase App Distribution
