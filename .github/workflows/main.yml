@@ -1,4 +1,4 @@
-name: Main Branch — Staging Deploy
+name: Main Branch — Deploy
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  staging-build:
-    name: Build & Deploy Staging
+  deploy:
+    name: Build & Deploy Web
     runs-on: ubuntu-latest
 
     steps:
@@ -30,28 +30,21 @@ jobs:
       - name: Generate code (build_runner)
         run: dart run build_runner build --delete-conflicting-outputs
 
+      # Quality checks already ran on the PR and passed before merge.
+      # main.yml skips re-running analyze/tests to keep deploy fast.
+      # If a direct push somehow bypasses the PR gate (emergency hotfix),
+      # run tests manually with: flutter test --coverage
+
       - name: Create .env files from secrets
         run: |
           printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nSENTRY_DSN=%s\nAPP_ENV=dev\nAPP_VERSION=0.1.0\n" \
             "$SUPABASE_URL_DEV" "$SUPABASE_ANON_KEY_DEV" "$SENTRY_DSN_DEV" > .env.dev
-          printf "SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nSENTRY_DSN=%s\nAPP_ENV=staging\nAPP_VERSION=0.1.0\n" \
-            "$SUPABASE_URL_STAGING" "$SUPABASE_ANON_KEY_STAGING" "$SENTRY_DSN_DEV" > .env.staging
-          cp .env.staging .env.prod
+          cp .env.dev .env.staging
+          cp .env.dev .env.prod
         env:
           SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
           SUPABASE_ANON_KEY_DEV: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
-          SUPABASE_URL_STAGING: ${{ secrets.SUPABASE_URL_STAGING }}
-          SUPABASE_ANON_KEY_STAGING: ${{ secrets.SUPABASE_ANON_KEY_STAGING }}
           SENTRY_DSN_DEV: ${{ secrets.SENTRY_DSN_DEV }}
-
-      - name: Analyze code
-        run: flutter analyze --fatal-infos
-
-      - name: Run tests
-        run: flutter test --coverage
-
-      - name: Build Android APK (staging)
-        run: flutter build apk --flavor staging -t lib/main_staging.dart
 
       # sqlite3.wasm is downloaded (not committed) to keep binary out of git.
       # drift_worker.js is compiled from web/drift_worker.dart at build time.
@@ -75,16 +68,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/web
 
-      # Uncomment when Firebase App Distribution is set up (Phase 5)
-      # - name: Upload to Firebase App Distribution
-      #   uses: wzieba/Firebase-Distribution-Github-Action@v1
-      #   with:
-      #     appId: ${{ secrets.FIREBASE_APP_ID }}
-      #     token: ${{ secrets.FIREBASE_TOKEN }}
-      #     file: build/app/outputs/flutter-apk/app-staging-release.apk
-
-      # Uncomment when Sentry auth token is configured
-      # - name: Upload source maps to Sentry
-      #   run: flutter packages pub run sentry_dart_plugin
-      #   env:
-      #     SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      # When ready to resume Android distribution (Phase 5):
+      # - Re-add: flutter build apk --flavor staging -t lib/main_staging.dart
+      # - Re-add: Firebase App Distribution upload step
+      # - Re-add: Sentry source map upload step
