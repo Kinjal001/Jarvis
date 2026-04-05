@@ -112,17 +112,17 @@ Phase 1 + 1.5 gives the skeleton and skin. Phase 2 gives the heartbeat — habit
 ### Deliverables
 
 **Habits system**
-- [ ] `Habit` entity: title, frequency (daily/weekly/custom RRULE), target count per period, color/icon, active status
-- [ ] `HabitCompletion` entity: habitId, date, count (for countable habits)
-- [ ] Drift tables: `habits`, `habit_completions`
-- [ ] Supabase tables: same schema
-- [ ] Use cases: CreateHabit, GetHabits, LogHabitCompletion, GetHabitCompletions, ArchiveHabit
-- [ ] Habits tab or section on Today screen — daily check-in
-- [ ] Streak calculation: consecutive days with ≥ 1 completion
+- [x] `Habit` entity: title, frequency (daily/weekly), target count per period, colorHex, active status
+- [x] `HabitCompletion` entity: habitId, completedAt, optional note
+- [x] Drift tables: `habits`, `habit_completions` (schema v3)
+- [ ] Supabase tables: same schema (add manually in Supabase dashboard)
+- [x] Use cases: CreateHabit, UpdateHabit, GetHabits, LogHabitCompletion, GetHabitCompletions, ArchiveHabit, DeleteHabitCompletion
+- [ ] Habits section on Today screen — daily check-in
+- [x] Streak calculation: `StreakCalculator` — currentStreak, longestStreak, isCompletedToday
 
 **Streak system**
 - [ ] Real streak counter on Profile screen (currently placeholder)
-- [ ] Streak calculation: `currentStreak`, `longestStreak` derived from HabitCompletion data
+- [x] Streak calculation: `currentStreak`, `longestStreak` derived from HabitCompletion data
 - [ ] Loss aversion trigger: show streak count prominently, warn when about to break
 
 **Analytics**
@@ -149,14 +149,34 @@ Phase 1 + 1.5 gives the skeleton and skin. Phase 2 gives the heartbeat — habit
 - [ ] Permission request flow
 
 ### PR Plan (4 PRs)
-| PR | Branch | What |
-|---|---|---|
-| PR 7 | feature/phase-2-habits-domain | Habit + HabitCompletion entities, interfaces, use cases |
-| PR 8 | feature/phase-2-habits-data | Drift tables (schema v3), models, datasources, repo impls |
-| PR 9 | feature/phase-2-habits-ui | Habits section on Today, streaks on Profile, analytics cards |
-| PR 10 | feature/phase-2-tags | Tags entity, junction table, attach UI, filter chips |
+| PR | Branch | Status | What |
+|---|---|---|---|
+| PR 7 | feature/phase-2-habits-domain | **MERGED** | Habit + HabitCompletion entities, interfaces, use cases, StreakCalculator (31 tests) |
+| PR 8 | feature/phase-2-habits-data | **IN REVIEW** | Drift schema v3, models, datasources, HabitRepositoryImpl (37 tests) |
+| PR 9 | feature/phase-2-habits-ui | pending | Habits section on Today, streaks on Profile, analytics cards |
+| PR 10 | feature/phase-2-tags | pending | Tags entity, junction table, attach UI, filter chips |
 
 *Recurring tasks and notifications may be bundled into PR 9 or split further depending on scope.*
+
+### PR 7 — Habits Domain (MERGED)
+- `HabitFrequency` enum: `daily`, `weekly`
+- `Habit` Freezed entity: id, userId, title, description, frequency, targetDaysOfWeek, targetCount, colorHex, isActive, createdAt, updatedAt
+- `HabitCompletion` Freezed entity: id, habitId, userId, completedAt, note
+- `IHabitRepository` interface: 7 methods (getHabits, createHabit, updateHabit, archiveHabit, logCompletion, getCompletions, deleteCompletion)
+- 7 use cases in `habit_usecases.dart` (all following standard constructor/call pattern)
+- `StreakCalculator` — pure static class: `currentStreak`, `longestStreak`, `isCompletedToday`
+  - "Today rule": if not completed today, streak still alive if yesterday was completed
+- 31 tests (14 use case + 17 streak calculator)
+
+### PR 8 — Habits Data Layer (IN REVIEW)
+- `HabitsTable` + `HabitCompletionsTable` — Drift tables with `syncStatus` column
+- `AppDatabase` bumped to schemaVersion 3 with additive v2→v3 migration
+- `targetDaysOfWeek` stored as CSV string in SQLite (e.g. `"1,3,5"`) — no TypeConverter needed
+- `HabitModel` + `HabitCompletionModel` — fromRow/toCompanion/toRemoteMap/fromRemoteMap
+- `HabitLocalDatasource` — full CRUD + archive + markSynced; completions ordered newest-first
+- `HabitRemoteDatasource` — Supabase upsert for habits + completions, delete for completions
+- `HabitRepositoryImpl` — local-first, fire-and-forget remote sync (same pattern as tasks)
+- 37 tests (model mapping, CSV round-trip via DB, datasource CRUD, repo success/failure)
 
 **Done when:** User has a reason to open the app every day — habits to check off, streak to protect, weekly progress visible.
 

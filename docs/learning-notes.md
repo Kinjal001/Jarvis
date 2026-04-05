@@ -16,8 +16,11 @@ and every gotcha we hit gets explained here. It grows as the project grows.
 8. [Phase 1 PR 3 — Presentation Layer](#8-phase-1-pr-3-the-presentation-layer)
 9. [Phase 1 PR 4 — Sync Service](#9-phase-1-pr-4-sync-service)
 10. [Phase 1.5 — UI Overhaul](#10-phase-15-ui-overhaul)
-11. [Gotchas and Hard-Won Lessons](#11-gotchas-and-hard-won-lessons)
-12. [What to Study Next (Phase 2)](#12-what-to-study-next-phase-2)
+11. [Phase 2 PR 7 — Habits Domain Layer](#11-phase-2-pr-7-habits-domain-layer)
+12. [Phase 2 PR 8 — Habits Data Layer](#12-phase-2-pr-8-habits-data-layer)
+13. [Drift on the Web — SQLite WASM](#13-drift-on-the-web-sqlite-wasm)
+14. [Gotchas and Hard-Won Lessons](#14-gotchas-and-hard-won-lessons)
+15. [What to Study Next (Phase 2 UI)](#15-what-to-study-next-phase-2-ui)
 
 ---
 
@@ -603,7 +606,237 @@ change UI behavior, update the tests to match the new spec.
 
 ---
 
-## 11. Gotchas and Hard-Won Lessons
+## 11. Phase 2 PR 7 — Habits Domain Layer
+
+### What makes habits architecturally different from tasks?
+
+A task is a one-time event. A habit is a recurring pattern tracked over time. This requires
+two entities instead of one:
+
+```
+Habit            ← the definition (what, how often, goal count)
+HabitCompletion  ← each individual log (when it was done)
+```
+
+The habit itself rarely changes. The completions accumulate every day. This one-to-many
+relationship is fundamental — you query "all completions for habit X" to compute streaks.
+
+### HabitFrequency enum
+
+```dart
+enum HabitFrequency { daily, weekly }
+```
+
+Why a separate file? Enums that are used across entities (habit.dart references it, so does
+streak_calculator.dart, so will the UI layer) should live in their own file. This avoids
+circular imports and makes the dependency graph clean.
+
+### targetDaysOfWeek — why List<int>?
+
+For weekly habits, you need to know which days of the week to track (e.g., Mon/Wed/Fri).
+ISO 8601 defines weekdays as integers: 1=Monday, 2=Tuesday, ..., 7=Sunday.
+
+Storing `[1, 3, 5]` means "Monday, Wednesday, Friday". The list is empty for daily habits
+(every day is a target, so specifying days would be redundant).
+
+### StreakCalculator — pure domain logic
+
+This is the most interesting class in the domain layer. It's a pure function: no database
+calls, no network, no randomness. Given a list of completions and a frequency, it computes
+the streak. This makes it trivially testable.
+
+**The "today rule":**
+If the user hasn't logged a habit today but did yesterday, the streak is *still alive*. The
+day isn't over yet. Only if both today AND yesterday are missing does the streak break.
+
+```dart
+DateTime cursor = anchor; // anchor = today
+if (!dateSet.contains(cursor)) {
+  cursor = anchor.subtract(const Duration(days: 1));  // try yesterday
+  if (!dateSet.contains(cursor)) return 0;  // streak broken
+}
+// walk backwards counting consecutive days
+```
+
+**Why `abstract final class`?**
+`abstract` prevents instantiation (you can't do `StreakCalculator()`). `final` prevents
+subclassing (nothing should extend a utility class). Together they signal: "this is a
+namespace for pure functions, not a class to be used as an object."
+
+### 17 streak calculator tests
+
+The test suite covers every edge case:
+- Empty list → 0
+- Single completion 2 days ago → 0 (streak broken)
+- Only today → 1
+- Only yesterday → 1 (today rule)
+- Consecutive 3 days ending today → 3
+- Gap in distant history doesn't affect current streak
+- Duplicate dates on same day count as one
+- Longest streak finds the longest run, not the current run
+
+This is exactly what unit tests are for: edge cases that would be painful to test manually
+but take milliseconds to verify programmatically.
+
+---
+
+## 12. Phase 2 PR 8 — Habits Data Layer
+
+### Schema migration — why additive only?
+
+When you already have users with data in their Drift databases (schema v2), you can't
+just recreate the database — that would delete their data. Drift's `MigrationStrategy`
+handles this with version checks:
+
+```dart
+onUpgrade: (m, from, to) async {
+  if (from < 2) { /* create v2 tables */ }
+  if (from < 3) { /* create v3 tables */ }
+}
+```
+
+A new install runs both blocks (from=1, to=3). An existing v2 user runs only the second
+block. Their existing goals/tasks data is untouched. This is called an **additive migration**.
+
+Rule: **never drop a column or table in production code**. Add columns with a default value
+instead. Removing data structures breaks existing users.
+
+### Storing List<int> in SQLite
+
+SQLite has no array type. `targetDaysOfWeek: [1, 3, 5]` needs to be stored as something
+SQLite understands. Two common approaches:
+
+1. **JSON string**: `"[1,3,5]"` — requires a JSON parser
+2. **CSV string**: `"1,3,5"` — simpler, easier to read in the database
+
+We chose CSV. The encode/decode is just two lines:
+```dart
+static String _encodeDays(List<int> days) => days.join(',');
+static List<int> _decodeDays(String encoded) =>
+    encoded.isEmpty ? [] : encoded.split(',').map(int.parse).toList();
+```
+
+The empty-string check handles daily habits where `targetDaysOfWeek` is `[]`.
+
+### The four model methods — why each one exists
+
+Every `XModel` class has four static methods:
+
+| Method | Direction | Used by |
+|---|---|---|
+| `fromRow` | DB row → domain entity | Repository reading from local DB |
+| `toCompanion` | Domain entity → DB insert | Repository writing to local DB |
+| `toRemoteMap` | Domain entity → JSON map | Remote datasource (Supabase upsert) |
+| `fromRemoteMap` | JSON map → domain entity | Sync service pulling from Supabase |
+
+The domain entity is always the "center". Everything converts to/from it. The entity itself
+has no knowledge of databases or JSON — it's pure Dart.
+
+### Round-trip test — testing the CSV encoding end-to-end
+
+The model test has a special "round-trip via DB" test:
+```dart
+await db.into(db.habitsTable).insertOnConflictUpdate(HabitModel.toCompanion(habit));
+final rows = await db.select(db.habitsTable).get();
+final recovered = HabitModel.fromRow(rows.first);
+expect(recovered.targetDaysOfWeek, [3, 6]);
+```
+
+This proves the CSV encode → SQLite → CSV decode pipeline works correctly, not just the
+encode and decode functions in isolation. It uses `NativeDatabase.memory()` — a real SQLite
+database that lives in RAM, not on disk. Fast, isolated, no cleanup needed.
+
+### getCompletionsByHabitId — ordering matters
+
+```dart
+..orderBy([(t) => OrderingTerm.desc(t.completedAt)])
+```
+
+Completions are returned newest-first. This matters for StreakCalculator which starts from
+the most recent completion and walks backwards. It also matters for displaying "recent activity"
+in the UI — you always want the latest completion at the top.
+
+### Fire-and-forget remote sync
+
+The repository writes to the local database first and returns immediately. The Supabase sync
+happens in the background:
+
+```dart
+await _local.upsert(HabitModel.toCompanion(habit));  // await — must succeed
+unawaited(_pushHabitToRemote(habit));                 // fire-and-forget
+return Right(habit);                                  // return without waiting
+```
+
+If the remote sync fails (no internet), the row stays with `syncStatus='pendingUpload'`. The
+background SyncService picks it up later. The user never sees a spinner waiting for the cloud.
+
+---
+
+## 13. Drift on the Web — SQLite WASM
+
+### Why web is different
+
+On Android and iOS, Flutter can call native SQLite because it's built into the OS. In a
+browser, you're running in a JavaScript sandbox — there is no native SQLite. Drift solves
+this with two pieces:
+
+1. **sqlite3.wasm** — SQLite compiled to WebAssembly (WASM). WASM is a binary format that
+   browsers can run at near-native speed. This is literally the SQLite C code, cross-compiled
+   to run in a browser tab.
+
+2. **drift_worker.js** — A JavaScript Web Worker that runs the database operations in a
+   background thread. Web Workers are like background threads in the browser. Running SQLite
+   on the main thread would freeze the UI.
+
+### How we set it up
+
+**`web/drift_worker.dart`** — A tiny Dart file:
+```dart
+import 'package:drift/wasm.dart';
+void main() {
+  WasmDatabase.workerMainForOpen();
+}
+```
+This is compiled to JavaScript at build time: `dart compile js -O2 -o web/drift_worker.js web/drift_worker.dart`
+
+**`app_database.dart`** — `kIsWeb` branch:
+```dart
+if (kIsWeb) {
+  return driftDatabase(
+    name: 'jarvis_db',
+    web: DriftWebOptions(
+      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+      driftWorker: Uri.parse('drift_worker.js'),
+    ),
+  );
+}
+```
+
+**CI workflow** — download and compile at build time (not committed to git):
+```yaml
+- name: Prepare drift web assets
+  run: |
+    curl -L -o web/sqlite3.wasm \
+      https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-2.9.4/sqlite3.wasm
+    dart compile js -O2 -o web/drift_worker.js web/drift_worker.dart
+```
+
+### Why not commit sqlite3.wasm?
+
+It's a ~2MB binary file. Binary files don't compress well in git and make the repo slow to
+clone. It's also a dependency that should be pinned to a specific version and downloaded
+reproducibly, like any other build artifact.
+
+### The gotcha: WasmDatabase.workerMainForOpen()
+
+The correct method is `WasmDatabase.workerMainForOpen()`. NOT `WasmDatabaseWorker.workerMainForOpen()`
+(that class doesn't exist). When this was wrong, the `dart compile js` step failed silently
+and the browser threw `ArgumentError` when trying to open the database, causing the "something
+went wrong" error across all screens.
+
+---
+
+## 14. Gotchas and Hard-Won Lessons
 
 | Gotcha | The Fix | Why It Happens |
 |---|---|---|
@@ -621,10 +854,14 @@ change UI behavior, update the tests to match the new spec.
 | AGP version not found on CI | Keep AGP at 8.9.1–8.10.x; do NOT blindly accept Android Studio upgrades | New AGP versions appear on Maven days-weeks after Studio suggests them |
 | Kotlin deprecated warning becomes error | Keep Kotlin at ≥ 2.1.0 | Flutter drops support for old Kotlin versions |
 | TextEditingController leak/crash | Dispose after dialog closes; use `ConsumerStatefulWidget` for screen-level controllers | Controllers created in `build()` are never disposed |
+| Drift web: "something went wrong" on all screens | Add `kIsWeb` branch with `DriftWebOptions` in `_openConnection()`; create `web/drift_worker.dart`; compile to JS at build time | Browser sandbox has no native SQLite; needs WASM + Web Worker |
+| `WasmDatabaseWorker` undefined | Use `WasmDatabase.workerMainForOpen()` — the method is on `WasmDatabase`, not a non-existent `WasmDatabaseWorker` class | Drift API: worker entry point is a static method on the database class |
+| `dart run drift_flutter:copy_worker` fails | Command doesn't exist in drift_flutter 0.2.x; manually create `web/drift_worker.dart` and compile with `dart compile js` | drift_flutter removed the setup helper commands in 0.2.x |
+| `always_use_package_imports` lint in lib/ | All imports inside `lib/` must use `package:jarvis/...` not relative `../` paths | Project has `always_use_package_imports` lint rule enabled |
 
 ---
 
-## 12. What to Study Next (Phase 2)
+## 15. What to Study Next (Phase 2 UI)
 
 Phase 2 introduces Habits — the most behaviorally complex feature so far. Here's what to
 understand before we build it.
@@ -719,4 +956,4 @@ but requires careful querying. We'll build this in Phase 2 PR 10.
 
 ---
 
-*This file is updated at the end of every phase/PR. Last updated: Phase 1.5 complete, starting Phase 2.*
+*This file is updated at the end of every phase/PR. Last updated: Phase 2 PRs 7 + 8 complete (domain + data layers), starting Phase 2 PR 9 (UI).*
